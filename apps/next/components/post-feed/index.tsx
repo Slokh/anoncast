@@ -30,10 +30,9 @@ export default function PostFeed({
   tokenAddress: string
   userAddress?: string
 }) {
-  const [selected, setSelected] = useState<'new' | 'trending'>('trending')
+  const [selected, setSelected] = useState<'new' | 'trending' | 'coins'>('trending')
   const { data: balance } = useBalance(tokenAddress, userAddress)
   const { signMessageAsync } = useSignMessage()
-
   const { data: trendingPosts, isLoading: isTrendingLoading } = useQuery({
     queryKey: ['trending', tokenAddress],
     queryFn: async (): Promise<Cast[]> => {
@@ -46,6 +45,14 @@ export default function PostFeed({
     queryKey: ['posts', tokenAddress],
     queryFn: async (): Promise<Cast[]> => {
       const response = await api.getNewPosts(tokenAddress)
+      return response?.casts || []
+    },
+  })
+
+  const { data: coinsPosts, isLoading: isCoinsLoading } = useQuery({
+    queryKey: ['coins', tokenAddress],
+    queryFn: async (): Promise<Cast[]> => {
+      const response = await api.getCoinsPosts(tokenAddress)
       return response?.casts || []
     },
   })
@@ -87,9 +94,9 @@ export default function PostFeed({
       <div className="flex flex-col gap-4 ">
         <div className="flex flex-row justify-between">
           <AnimatedTabs
-            tabs={['trending', 'new']}
+            tabs={['trending', 'new', 'coins']}
             activeTab={selected}
-            onTabChange={(tab) => setSelected(tab as 'new' | 'trending')}
+            onTabChange={(tab) => setSelected(tab as 'new' | 'trending' | 'coins')}
           />
         </div>
         {selected === 'new' ? (
@@ -99,6 +106,14 @@ export default function PostFeed({
             <Posts canDelete={canDelete} canPromote={canPromote} casts={newPosts} />
           ) : (
             <h1>Something went wrong. Please refresh the page.</h1>
+          )
+        ) : selected === 'coins' ? (
+          isCoinsLoading ? (
+            <SkeletonPosts />
+          ) : coinsPosts?.length && coinsPosts?.length > 0 ? (
+            <Posts canDelete={canDelete} canPromote={canPromote} casts={coinsPosts} />
+          ) : (
+            <h1>No coin posts found.</h1>
           )
         ) : isTrendingLoading ? (
           <SkeletonPosts />

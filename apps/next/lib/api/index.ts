@@ -92,4 +92,10 @@ export const api = {
     );
     return response.data;
   },
+  getCoinsPosts: async (tokenAddress: string) => {
+    const response = await apiClient.request<GetCastsResponse>(
+      `/feed/${tokenAddress}/coins`
+    );
+    return response.data;
+  },
 };
