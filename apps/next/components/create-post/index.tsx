@@ -23,6 +23,7 @@ import { formatUnits } from 'viem'
 import { useToast } from '@/hooks/use-toast'
 import { api } from '@/lib/api'
 import Confetti from 'confetti-react'
+import { BadWords } from '@/lib/badWords'
 
 const MAX_EMBEDS = 2
 
@@ -140,6 +141,13 @@ function CreatePostForm() {
   }
 
   const handleCreatePost = async () => {
+     const res = BadWords.find((word) => text?.includes(word.word));
+     if (res) {
+       toast({
+         title: `Post contains ${res.type} language`,
+       });
+       return;
+     }
     await createPost()
     toast({
       title: 'Post will be created in 1-2 minutes',
