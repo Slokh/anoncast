@@ -51,7 +51,7 @@ export default function ActionComponent({
           <TokenRequirement
             tokenAmount={data}
             tokenNeeded={DELETE_POST}
-            string="Delete posts"
+            string="Delete posts (X/Twitter only)"
             isConnected={!!address && !isLoading}
           />
         </ul>
@@ -118,9 +118,8 @@ export default function ActionComponent({
             rel="noreferrer"
           >
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex flex-row items-center justify-between gap-2">
-              <p className="font-bold">{`Not enough tokens to post. Buy ${
-                FARCASTER_POST - BALANCE
-              } more.`}</p>
+              <p className="font-bold">{`Not enough tokens to post. Buy ${FARCASTER_POST - BALANCE
+                } more.`}</p>
             </div>
           </a>
         ) : (
