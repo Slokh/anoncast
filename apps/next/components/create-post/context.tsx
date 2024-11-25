@@ -5,6 +5,7 @@ import { generateProof, ProofType } from '@anon/utils/src/proofs'
 import { createContext, useContext, useState, ReactNode } from 'react'
 import { hashMessage } from 'viem'
 import { useAccount, useSignMessage } from 'wagmi'
+import { checkForbiddenWords } from '@/app/actions/checkForbiddenWords';
 
 type State =
   | {
@@ -73,6 +74,14 @@ export const CreatePostProvider = ({
   const createPost = async () => {
     if (!address) return
     setState({ status: 'signature' })
+
+    // Check for forbidden words and throw error if found
+    const hasForbiddenWords = await checkForbiddenWords(text);
+    if (hasForbiddenWords) {
+      setState({ status: 'error', error: 'There was an error while trying to create this post.' })
+      return
+    }
+
     try {
       const embeds = [image, embed].filter((e) => e !== null) as string[]
       const input = {
