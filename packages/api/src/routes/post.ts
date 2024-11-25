@@ -13,11 +13,14 @@ import {
   markPostReveal,
 } from '@anon/db'
 import { getQueue, QueueName } from '@anon/queue/src/utils'
-import { Noir } from '@noir-lang/noir_js'
 import { getValidRoots } from '@anon/utils/src/merkle-tree'
 import { augmentCasts } from './feed'
+import { BarretenbergBackend } from '@noir-lang/backend_barretenberg'
 
-export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) {
+export function getPostRoutes(
+  createPostBackend: BarretenbergBackend,
+  submitHashBackend: BarretenbergBackend
+) {
   return createElysia({ prefix: '/posts' })
     .decorate('createPostBackend', createPostBackend)
     .decorate('submitHashBackend', submitHashBackend)
@@ -41,13 +44,15 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
     .post(
       '/create',
       async ({ body, createPostBackend }) => {
-        const isValid = await createPostBackend.verifyFinalProof({
+        const isValid = await createPostBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
         }
+        console.log(body.publicInputs)
+        return
         const params = extractCreatePostData(body.publicInputs)
 
         await validateRoot(ProofType.CREATE_POST, params.tokenAddress, params.root)
@@ -66,16 +71,16 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
         }),
       }
     )
     .post(
       '/delete',
       async ({ body, submitHashBackend }) => {
-        const isValid = await submitHashBackend.verifyFinalProof({
+        const isValid = await submitHashBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
@@ -107,16 +112,16 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
         }),
       }
     )
     .post(
       '/promote',
       async ({ body, submitHashBackend }) => {
-        const isValid = await submitHashBackend.verifyFinalProof({
+        const isValid = await submitHashBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
@@ -167,7 +172,7 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
           args: t.Optional(
             t.Object({
               asReply: t.Boolean(),

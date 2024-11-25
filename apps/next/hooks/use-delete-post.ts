@@ -77,15 +77,12 @@ export const useDeletePost = (tokenAddress: string) => {
       }
 
       if (process.env.NEXT_PUBLIC_DISABLE_QUEUE) {
-        await api.deletePost(
-          Array.from(proof.proof),
-          proof.publicInputs.map((i) => Array.from(i))
-        )
+        await api.deletePost(Array.from(proof.proof), proof.publicInputs)
       } else {
         await api.submitAction(
           ProofType.DELETE_POST,
           Array.from(proof.proof),
-          proof.publicInputs.map((i) => Array.from(i)),
+          proof.publicInputs,
           {}
         )
       }

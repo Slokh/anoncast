@@ -35,7 +35,7 @@ export const api = {
   submitAction: async (
     type: ProofType,
     proof: number[],
-    publicInputs: number[][],
+    publicInputs: string[],
     args: { asReply?: boolean }
   ) => {
     await apiClient.request(`/posts/submit`, {
@@ -43,14 +43,14 @@ export const api = {
       body: JSON.stringify({ type, proof, publicInputs, args }),
     })
   },
-  createPost: async (proof: number[], publicInputs: number[][]) => {
+  createPost: async (proof: number[], publicInputs: string[]) => {
     const response = await apiClient.request<PostCastResponse>(`/posts/create`, {
       method: 'POST',
       body: JSON.stringify({ proof, publicInputs }),
     })
     return response.data
   },
-  deletePost: async (proof: number[], publicInputs: number[][]) => {
+  deletePost: async (proof: number[], publicInputs: string[]) => {
     const response = await apiClient.request<{ success: boolean }>(`/posts/delete`, {
       method: 'POST',
       body: JSON.stringify({ proof, publicInputs }),
@@ -59,7 +59,7 @@ export const api = {
   },
   promotePost: async (
     proof: number[],
-    publicInputs: number[][],
+    publicInputs: string[],
     args: { asReply?: boolean }
   ) => {
     const response = await apiClient.request<
