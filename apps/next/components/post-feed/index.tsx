@@ -39,6 +39,7 @@ export default function PostFeed({
           tabs={['trending', 'new']}
           activeTab={selected}
           onTabChange={(tab) => setSelected(tab as 'new' | 'trending')}
+          layoutId="feed-tabs"
         />
       </div>
       {selected === 'new' ? (

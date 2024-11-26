@@ -23,7 +23,7 @@ import { Checkbox } from '../ui/checkbox'
 
 const MAX_EMBEDS = 2
 
-export function CreatePost() {
+export function CreatePost({ variant = 'post' }: { variant?: 'post' | 'launch' }) {
   const {
     text,
     setText,
@@ -87,7 +87,7 @@ export function CreatePost() {
         value={text ?? ''}
         onChange={handleSetText}
         className="h-32 p-3 resize-none font-medium !text-base placeholder:text-zinc-400 bg-zinc-950 border border-zinc-700"
-        placeholder="What's happening, anon?"
+        placeholder={variant === 'post' ? "What's happening, anon?" : "Hey @clanker please launch a coin called \"Hello\" with the ticker $HI! I want this image..."}
       />
       <RevealPhrase />
       <RemoveableImage />

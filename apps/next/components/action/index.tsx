@@ -9,8 +9,16 @@ import { useAccount } from 'wagmi'
 
 export default function ActionComponent({
   tokenAddress,
+  variant = 'post',
+  title,
+  description,
+  requirements,
 }: {
   tokenAddress: string
+  variant?: 'post' | 'launch'
+  title?: string
+  description?: string
+  requirements?: Array<{ amount: number; label: string }>
 }) {
   const { address } = useAccount()
   const { data, isLoading } = useBalance(tokenAddress)
@@ -21,39 +29,40 @@ export default function ActionComponent({
     BigInt(TOKEN_CONFIG[ANON_ADDRESS].promoteAmount) / BigInt(10 ** 18)
   const DELETE_POST = BigInt(TOKEN_CONFIG[ANON_ADDRESS].deleteAmount) / BigInt(10 ** 18)
 
+  // Default values for post variant
+  const defaultTitle = "Post anonymously to Farcaster and X/Twitter"
+  const defaultDescription = "Posts are made anonymous using zk proofs. Due to the complex calculations required, it could take up to a few minutes. Do not post porn, doxes, shills, or threats. This is not about censorship resistance - it's about great anonymous posts."
+  const defaultRequirements = [
+    { amount: Number(FARCASTER_POST), label: "Post on Farcaster" },
+    { amount: Number(TWITTER_PROMOTE), label: "Promote posts to X/Twitter" },
+    { amount: Number(DELETE_POST), label: "Delete posts" }
+  ]
+
+  const displayTitle = title || defaultTitle
+  const displayDescription = description || defaultDescription
+  const displayRequirements = requirements || defaultRequirements
+
   return (
     <Alert className="flex flex-col gap-4 bg-zinc-900 border border-zinc-700">
       <AlertTitle className="font-semibold text-xl">
-        Post anonymously to Farcaster and X/Twitter
+        {displayTitle}
       </AlertTitle>
       <AlertDescription>
         <p className="text-zinc-400">
-          Posts are made anonymous using zk proofs. Due to the complex calculations
-          required, it could take up to a few minutes. Do not post porn, doxes, shills, or
-          threats. This is not about censorship resistance - it&apos;s about great
-          anonymous posts.
+          {displayDescription}
         </p>
         <br />
-        <p className="text-zinc-400 ">Holder requirements:</p>
+        <p className="text-zinc-400">Holder requirements:</p>
         <ul className="flex flex-col gap-1 mt-3">
-          <TokenRequirement
-            tokenAmount={data}
-            tokenNeeded={FARCASTER_POST}
-            string="Post on Farcaster"
-            isConnected={!!address && !isLoading}
-          />
-          <TokenRequirement
-            tokenAmount={data}
-            tokenNeeded={TWITTER_PROMOTE}
-            string="Promote posts to X/Twitter"
-            isConnected={!!address && !isLoading}
-          />
-          <TokenRequirement
-            tokenAmount={data}
-            tokenNeeded={DELETE_POST}
-            string="Delete posts"
-            isConnected={!!address && !isLoading}
-          />
+          {displayRequirements.map((req, index) => (
+            <TokenRequirement
+              key={index}
+              tokenAmount={data}
+              tokenNeeded={BigInt(req.amount)}
+              string={req.label}
+              isConnected={!!address && !isLoading}
+            />
+          ))}
         </ul>
       </AlertDescription>
       <div className="flex flex-row gap-2 justify-between ">
@@ -124,7 +133,7 @@ export default function ActionComponent({
             </div>
           </a>
         ) : (
-          <CreatePost />
+          <CreatePost variant={variant} />
         )
       ) : (
         <></>
