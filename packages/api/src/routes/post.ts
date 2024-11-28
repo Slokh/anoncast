@@ -4,7 +4,7 @@ import { ProofType } from '@anon/utils/src/proofs/generate'
 import { verifyMessage, zeroAddress } from 'viem'
 import { CreatePostParams, SubmitHashParams } from '../services/types'
 import { neynar } from '../services/neynar'
-import { promoteToTwitter, twitterClient } from '../services/twitter'
+import { promoteToTwitter, getTwitterClient } from '../services/twitter'
 import {
   createPostMapping,
   createPostReveal,
@@ -13,11 +13,14 @@ import {
   markPostReveal,
 } from '@anon/db'
 import { getQueue, QueueName } from '@anon/queue/src/utils'
-import { Noir } from '@noir-lang/noir_js'
 import { getValidRoots } from '@anon/utils/src/merkle-tree'
 import { augmentCasts } from './feed'
+import { UltraPlonkBackend } from '@aztec/bb.js'
 
-export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) {
+export function getPostRoutes(
+  createPostBackend: UltraPlonkBackend,
+  submitHashBackend: UltraPlonkBackend
+) {
   return createElysia({ prefix: '/posts' })
     .decorate('createPostBackend', createPostBackend)
     .decorate('submitHashBackend', submitHashBackend)
@@ -34,20 +37,22 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
         body: t.Object({
           type: t.Enum(ProofType),
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
         }),
       }
     )
     .post(
       '/create',
       async ({ body, createPostBackend }) => {
-        const isValid = await createPostBackend.verifyFinalProof({
+        const isValid = await createPostBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
         }
+        console.log('XXX', isValid)
+        return
         const params = extractCreatePostData(body.publicInputs)
 
         await validateRoot(ProofType.CREATE_POST, params.tokenAddress, params.root)
@@ -66,16 +71,16 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
         }),
       }
     )
     .post(
       '/delete',
       async ({ body, submitHashBackend }) => {
-        const isValid = await submitHashBackend.verifyFinalProof({
+        const isValid = await submitHashBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
@@ -88,7 +93,7 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
         const postMapping = await getPostMapping(params.hash)
         if (postMapping) {
           if (postMapping.tweetId) {
-            await twitterClient.v2.deleteTweet(postMapping.tweetId)
+            await getTwitterClient().v2.deleteTweet(postMapping.tweetId)
           }
           if (postMapping.bestOfHash) {
             await neynar.delete({
@@ -107,16 +112,16 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
         }),
       }
     )
     .post(
       '/promote',
       async ({ body, submitHashBackend }) => {
-        const isValid = await submitHashBackend.verifyFinalProof({
+        const isValid = await submitHashBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
@@ -209,7 +214,7 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
           args: t.Optional(
             t.Object({
               asReply: t.Optional(t.Boolean()),
@@ -221,9 +226,9 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
     .post(
       '/launch',
       async ({ body, submitHashBackend }) => {
-        const isValid = await submitHashBackend.verifyFinalProof({
+        const isValid = await submitHashBackend.verifyProof({
           proof: new Uint8Array(body.proof),
-          publicInputs: body.publicInputs.map((i) => new Uint8Array(i)),
+          publicInputs: body.publicInputs,
         })
         if (!isValid) {
           throw new Error('Invalid proof')
@@ -286,7 +291,7 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
       {
         body: t.Object({
           proof: t.Array(t.Number()),
-          publicInputs: t.Array(t.Array(t.Number())),
+          publicInputs: t.Array(t.String()),
         }),
       }
     )
@@ -357,7 +362,7 @@ export function getPostRoutes(createPostBackend: Noir, submitHashBackend: Noir) 
     )
 }
 
-function extractCreatePostData(data: number[][]): CreatePostParams {
+function extractCreatePostData(data: string[]): CreatePostParams {
   const root = `0x${Buffer.from(data[0]).toString('hex')}`
 
   const tokenAddressArray = data[1]
@@ -417,7 +422,7 @@ function extractCreatePostData(data: number[][]): CreatePostParams {
   }
 }
 
-function extractSubmitHashData(data: number[][]): SubmitHashParams {
+function extractSubmitHashData(data: string[]): SubmitHashParams {
   const root = `0x${Buffer.from(data[0]).toString('hex')}`
 
   const tokenAddressArray = data[1]

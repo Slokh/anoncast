@@ -13,12 +13,13 @@ TwitterApiV2Settings.debug = true
 
 const redis = new Redis(process.env.REDIS_URL as string)
 
-export const twitterClient = new TwitterApi({
-  appKey: process.env.TWITTER_API_KEY as string,
-  appSecret: process.env.TWITTER_API_SECRET as string,
-  accessToken: process.env.TWITTER_ACCESS_TOKEN as string,
-  accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET as string,
-})
+export const getTwitterClient = () =>
+  new TwitterApi({
+    appKey: process.env.TWITTER_API_KEY as string,
+    appSecret: process.env.TWITTER_API_SECRET as string,
+    accessToken: process.env.TWITTER_ACCESS_TOKEN as string,
+    accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET as string,
+  })
 
 export async function promoteToTwitter(
   cast: Cast,
@@ -108,7 +109,7 @@ async function formatAndSubmitToTwitter(
         })
     })
     mediaIds.push(
-      await twitterClient.v1.uploadMedia(binaryData as unknown as Buffer, {
+      await getTwitterClient().v1.uploadMedia(binaryData as unknown as Buffer, {
         mimeType,
       })
     )
@@ -155,7 +156,7 @@ async function formatAndSubmitToTwitter(
   }
 
   try {
-    const result = await twitterClient.v2.tweet(text, params)
+    const result = await getTwitterClient().v2.tweet(text, params)
     if (result?.data?.id) {
       return result.data.id
     }

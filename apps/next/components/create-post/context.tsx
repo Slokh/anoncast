@@ -128,15 +128,12 @@ export const CreatePostProvider = ({
       }
 
       if (process.env.NEXT_PUBLIC_DISABLE_QUEUE) {
-        await api.createPost(
-          Array.from(proof.proof),
-          proof.publicInputs.map((input) => Array.from(input))
-        )
+        await api.createPost(Array.from(proof.proof), proof.publicInputs)
       } else {
         await api.submitAction(
           ProofType.CREATE_POST,
           Array.from(proof.proof),
-          proof.publicInputs.map((input) => Array.from(input)),
+          proof.publicInputs,
           {}
         )
       }

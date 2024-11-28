@@ -72,15 +72,12 @@ export const useLaunchPost = (tokenAddress: string) => {
       }
 
       if (process.env.NEXT_PUBLIC_DISABLE_QUEUE) {
-        await api.launchPost(
-          Array.from(proof.proof),
-          proof.publicInputs.map((i) => Array.from(i))
-        )
+        await api.launchPost(Array.from(proof.proof), proof.publicInputs)
       } else {
         await api.submitAction(
           ProofType.LAUNCH_POST,
           Array.from(proof.proof),
-          proof.publicInputs.map((i) => Array.from(i)),
+          proof.publicInputs,
           {}
         )
       }
