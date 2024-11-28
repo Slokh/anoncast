@@ -2,7 +2,6 @@ import { getSignerForAddress } from '@anon/db'
 import crypto from 'crypto'
 import { Redis } from 'ioredis'
 import {
-  CreatePostParams,
   DeleteParams,
   GetBulkCastsResponse,
   GetBulkUsersResponse,
@@ -12,7 +11,6 @@ import {
   GetUserResponse,
   PostCastResponse,
   QuoteCastParams,
-  SubmitHashParams,
 } from './types'
 
 const redis = new Redis(process.env.REDIS_URL as string)
@@ -30,14 +28,8 @@ class NeynarService {
 
   static getInstance(): NeynarService {
     if (!NeynarService.instance) {
-      const apiKey = process.env.NEYNAR_API_KEY
-      if (!apiKey) {
-        throw new Error('NEYNAR_API_KEY environment variable is not set')
-      }
-      const anonfunApiKey = process.env.NEYNAR_API_KEY_ANONFUN
-      if (!anonfunApiKey) {
-        throw new Error('NEYNAR_API_KEY_ANONFUN environment variable is not set')
-      }
+      const apiKey = process.env.NEYNAR_API_KEY!
+      const anonfunApiKey = process.env.NEYNAR_API_KEY_ANONFUN!
       NeynarService.instance = new NeynarService(apiKey, anonfunApiKey)
     }
     return NeynarService.instance
@@ -53,6 +45,10 @@ class NeynarService {
       anonfun?: boolean
     }
   ): Promise<T> {
+    if (!this.apiKey && !this.anonfunApiKey) {
+      return null as T
+    }
+
     const { maxRetries = 1, retryDelay = 10000, method, body, anonfun } = options ?? {}
     let retries = 0
 

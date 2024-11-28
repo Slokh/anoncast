@@ -1,15 +1,10 @@
-import { BarretenbergBackend } from '@noir-lang/backend_barretenberg'
-import { Noir } from '@noir-lang/noir_js'
-import { ProofData } from '@noir-lang/types'
+import { UltraPlonkBackend, ProofData } from '@aztec/bb.js'
 import { getCircuit } from './utils'
 import { ProofType } from './generate'
 
 export async function getProvingBackend(proofType: ProofType) {
   const circuit = getCircuit(proofType)
-  // @ts-ignore
-  const backend = new BarretenbergBackend(circuit)
-  // @ts-ignore
-  const noir = new Noir(circuit, backend)
+  const backend = new UltraPlonkBackend(circuit.bytecode)
 
   await backend.instantiate()
 
@@ -18,10 +13,10 @@ export async function getProvingBackend(proofType: ProofType) {
     backend['acirUncompressedBytecode']
   )
 
-  return noir
+  return backend
 }
 
 export async function verifyProof(proofType: ProofType, proof: ProofData) {
-  const noir = await getProvingBackend(proofType)
-  return await noir.verifyFinalProof(proof)
+  const backend = await getProvingBackend(proofType)
+  return await backend.verifyProof(proof)
 }

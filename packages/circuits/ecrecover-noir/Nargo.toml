@@ -6,4 +6,4 @@ notes = "AMDG"
 type = "lib"
 
 [dependencies]
-array_helpers = { tag = "v0.19.0", git = "https://github.com/colinnielsen/noir-array-helpers" }
+array_helpers = { tag = "v0.30.0", git = "https://github.com/signorecello/noir-array-helpers" }
