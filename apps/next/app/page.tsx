@@ -5,10 +5,12 @@ import { PostFeed, PromotedFeed } from '@/components/post-feed'
 import { ANON_ADDRESS } from '@anon/utils/src/config'
 import AnimatedTabs from '@/components/post-feed/animated-tabs'
 import { CreatePostProvider, useCreatePost } from '@/components/create-post/context'
+import MainComponent from '@/components/nav-links'
 
 export default function Home() {
   return (
     <CreatePostProvider tokenAddress={ANON_ADDRESS}>
+      <MainComponent/>
       <Inner />
     </CreatePostProvider>
   )
