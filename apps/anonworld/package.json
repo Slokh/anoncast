@@ -1,0 +1,37 @@
+{
+  "name": "anonworld",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "cd ../.. && yarn build && cd apps/next && next build",
+    "start": "next start",
+    "serve": "NODE_ENV=production next start --port 8151",
+    "lint": "next lint",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@anonworld/ui": "*",
+    "@tamagui/config": "^1.120.0",
+    "@tamagui/next-theme": "^1.120.0",
+    "mini-css-extract-plugin": "^2.9.1",
+    "next": "14.2.14",
+    "raf": "^3.4.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-native": "0.74.2",
+    "react-native-web": "~0.19.12",
+    "react-native-web-lite": "^1.112.4",
+    "tamagui": "^1.120.0",
+    "vercel": "latest"
+  },
+  "devDependencies": {
+    "@tamagui/next-plugin": "^1.120.0",
+    "@types/node": "^20.14.1",
+    "eslint-config-next": "^14.2.3",
+    "next-compose-plugins": "^2.2.1",
+    "next-transpile-modules": "^10.0.1",
+    "tree-kill": "^1.2.2",
+    "vitest": "^2.1.1"
+  }
+}
