@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tamagui/toast": "^1.120.0",
+    "expo-constants": "^17.0.3",
     "tamagui": "^1.120.0"
   },
   "devDependencies": {

@@ -52,7 +52,7 @@ export const NextTamaguiProvider = ({ children }: { children: ReactNode }) => {
 
         <style jsx global>{`
           html {
-            font-family: 'Inter';
+            font-family: 'Geist';
           }
         `}</style>
       </>

@@ -13,6 +13,7 @@
   "dependencies": {
     "@anonworld/ui": "*",
     "@tamagui/config": "^1.120.0",
+    "@tamagui/lucide-icons": "^1.120.2",
     "@tamagui/next-theme": "^1.120.0",
     "mini-css-extract-plugin": "^2.9.1",
     "next": "14.2.14",
@@ -20,6 +21,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-native": "0.74.2",
+    "react-native-svg": "^15.10.1",
     "react-native-web": "~0.19.12",
     "react-native-web-lite": "^1.112.4",
     "tamagui": "^1.120.0",

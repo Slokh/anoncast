@@ -1,21 +1,22 @@
 import type { Metadata } from 'next'
 import { NextTamaguiProvider } from './NextTamaguiProvider'
+import { Header } from '@/components/header'
+import { GeistSans } from 'geist/font/sans'
 
 export const metadata: Metadata = {
-  title: 'Tamagui • App Router',
-  description: 'Tamagui, Solito, Expo & Next.js',
+  title: 'anon.world',
+  description: 'anon.world',
   icons: '/favicon.ico',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // You can use `suppressHydrationWarning` to avoid the warning about mismatched content during hydration in dev mode
-    <html
-      lang="en"
-      suppressHydrationWarning
-    >
-      <body>
-        <NextTamaguiProvider>{children}</NextTamaguiProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={GeistSans.className}>
+        <NextTamaguiProvider>
+          <Header />
+          {children}
+        </NextTamaguiProvider>
       </body>
     </html>
   )

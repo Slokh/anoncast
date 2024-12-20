@@ -2,6 +2,6 @@
 
 import { View } from '@anonworld/ui'
 
-export default function Home() {
+export default function Accounts() {
   return <View></View>
 }

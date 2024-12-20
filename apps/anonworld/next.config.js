@@ -56,6 +56,18 @@ module.exports = () => {
     experimental: {
       scrollRestoration: true,
     },
+    webpack: (webpackConfig, _options) => {
+      return {
+        ...webpackConfig,
+        resolve: {
+          ...webpackConfig.resolve,
+          alias: {
+            ...webpackConfig.resolve.alias,
+            'react-native-svg': '@tamagui/react-native-svg',
+          },
+        },
+      }
+    },
   }
 
   for (const plugin of plugins) {
