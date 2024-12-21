@@ -7,6 +7,7 @@ import { getUsableCredential } from '../../../utils'
 import { Farcaster } from '../../svg/farcaster'
 import { X } from '../../svg/x'
 import { NamedExoticComponent } from 'react'
+import { useFarcasterUser } from '../../../hooks/use-farcaster-user'
 
 export function PostActions({ post }: { post: Cast }) {
   const { data } = useActions()
@@ -64,8 +65,8 @@ function ActionItem({ post, action }: { post: Cast; action: Action }) {
 
   switch (action.type) {
     case ActionType.COPY_POST_TWITTER: {
-      const hasRelationship = post.children.some(
-        (c) => c.targetAccount === action.metadata.target.post.text
+      const hasRelationship = post.relationships.some(
+        (c) => c.targetAccount === action.metadata.twitter
       )
       if (hasRelationship) {
         return null
@@ -88,14 +89,14 @@ function ActionItem({ post, action }: { post: Cast; action: Action }) {
 
       return (
         <ActionButton
-          label={`Promote to @${action.metadata.twitter}`}
+          label={`Post to @${action.metadata.twitter}`}
           onPress={() => {}}
-          icon={X}
+          Icon={X}
         />
       )
     }
     case ActionType.DELETE_POST_TWITTER: {
-      const hasRelationship = post.children.some(
+      const hasRelationship = post.relationships.some(
         (c) => c.targetAccount === action.metadata.twitter
       )
       if (!hasRelationship) {
@@ -105,13 +106,13 @@ function ActionItem({ post, action }: { post: Cast; action: Action }) {
         <ActionButton
           label={`Delete from @${action.metadata.twitter}`}
           onPress={() => {}}
-          icon={Trash}
+          Icon={Trash}
           destructive
         />
       )
     }
     case ActionType.COPY_POST_FARCASTER: {
-      const hasRelationship = post.children.some(
+      const hasRelationship = post.relationships.some(
         (c) => c.targetAccount === action.metadata.fid
       )
       if (hasRelationship) {
@@ -129,55 +130,72 @@ function ActionItem({ post, action }: { post: Cast; action: Action }) {
         return null
       }
 
-      return (
-        <ActionButton label="Promote to Farcaster" onPress={() => {}} icon={Farcaster} />
-      )
+      return <PostToFarcaster fid={action.metadata.fid} />
     }
     case ActionType.DELETE_POST_FARCASTER: {
-      const hasRelationship = post.children.some(
+      const hasRelationship = post.relationships.some(
         (c) => c.targetAccount === action.metadata.fid
       )
       if (!hasRelationship) {
         return null
       }
-      return (
-        <ActionButton
-          label="Delete from Farcaster"
-          onPress={() => {}}
-          icon={Trash}
-          destructive
-        />
-      )
+      return <DeleteFromFarcaster fid={action.metadata.fid} />
     }
   }
 
   return null
 }
 
+function PostToFarcaster({ fid }: { fid: string }) {
+  const { data } = useFarcasterUser(fid)
+  return (
+    <ActionButton
+      label={`Post to @${data?.username}`}
+      onPress={() => {}}
+      Icon={Farcaster}
+    />
+  )
+}
+
+function DeleteFromFarcaster({ fid }: { fid: string }) {
+  const { data } = useFarcasterUser(fid)
+  return (
+    <ActionButton
+      label={`Delete from @${data?.username}`}
+      onPress={() => {}}
+      Icon={Trash}
+      destructive
+    />
+  )
+}
+
 function ActionButton({
   label,
   onPress,
-  icon,
+  Icon,
   destructive = false,
 }: {
   label: string
   onPress: () => void
-  icon?: NamedExoticComponent
+  Icon?: NamedExoticComponent<any>
   destructive?: boolean
 }) {
   return (
     <YGroup.Item>
-      <Button
+      <View
         onPress={onPress}
-        icon={icon}
-        scaleIcon={0.75}
-        justifyContent="flex-start"
-        size="$3"
+        fd="row"
+        ai="center"
+        gap="$2"
+        px="$3.5"
+        py="$2.5"
+        hoverStyle={{ bg: '$color5' }}
       >
+        {Icon && <Icon size={16} color={destructive ? '$red9' : undefined} />}
         <Text fos="$2" fow="400" color={destructive ? '$red9' : undefined}>
           {label}
         </Text>
-      </Button>
+      </View>
     </YGroup.Item>
   )
 }

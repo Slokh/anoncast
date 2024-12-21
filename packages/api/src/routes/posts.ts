@@ -1,18 +1,19 @@
-import { augmentCasts, createElysia } from '../utils'
+import { createElysia } from '../utils'
 import { t } from 'elysia'
 import { verifyMessage } from 'viem'
 import { neynar } from '../services/neynar'
-import { getPostChildren, getBulkPosts, getPost, revealPost } from '@anonworld/db'
+import { getPost, revealPost } from '@anonworld/db'
+import { formatPosts } from './feeds'
 
 export const postsRoutes = createElysia({ prefix: '/posts' })
   .get(
     '/:hash',
     async ({ params }) => {
-      const cast = await neynar.getCast(params.hash)
-      if (!cast) {
-        throw new Error('Cast not found')
+      const post = await getPost(params.hash)
+      if (!post) {
+        throw new Error('Post not found')
       }
-      return (await augmentCasts([cast.cast]))[0]
+      return (await formatPosts([post]))[0]
     },
     {
       params: t.Object({
@@ -79,67 +80,6 @@ export const postsRoutes = createElysia({ prefix: '/posts' })
         phrase: t.String(),
         signature: t.String(),
         address: t.String(),
-      }),
-    }
-  )
-  .post(
-    '/bulk-metadata',
-    async ({ body }) => {
-      const [posts, relationships] = await Promise.all([
-        getBulkPosts(body.hashes),
-        getPostChildren(body.hashes),
-      ])
-
-      type RevealMetadata = {
-        input: string
-        phrase?: string
-        signature?: string
-        address?: string
-        revealedAt: string
-      } | null
-
-      const data: Record<
-        string,
-        {
-          hash: string
-          revealHash: string | null
-          revealMetadata: RevealMetadata
-          relationships: {
-            target: string
-            targetAccount: string
-            targetId: string
-          }[]
-        }
-      > = {}
-
-      for (const post of posts) {
-        data[post.hash] = {
-          hash: post.hash,
-          revealHash: post.reveal_hash,
-          revealMetadata: {
-            input: JSON.stringify(post.data),
-            ...(post.reveal_metadata as RevealMetadata),
-            revealedAt: post.updated_at.toISOString(),
-          },
-          relationships: [],
-        }
-      }
-
-      for (const relationship of relationships) {
-        data[relationship.post_hash].relationships.push({
-          target: relationship.target,
-          targetAccount: relationship.target_account,
-          targetId: relationship.target_id,
-        })
-      }
-
-      return {
-        data: Object.values(data),
-      }
-    },
-    {
-      body: t.Object({
-        hashes: t.Array(t.String()),
       }),
     }
   )

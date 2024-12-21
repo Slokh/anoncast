@@ -5,8 +5,8 @@ import { X } from '../svg/x'
 import { useFarcasterUser } from '../../hooks/use-farcaster-user'
 
 export function PostRelationships({ post }: { post: Cast }) {
-  const farcaster = post.children.filter((c) => c.target === 'farcaster')[0]
-  const twitter = post.children.filter((c) => c.target === 'twitter')[0]
+  const farcaster = post.relationships.find((c) => c.target === 'farcaster')
+  const twitter = post.relationships.find((c) => c.target === 'twitter')
 
   return (
     <View fd="row" gap="$2" ai="center">
@@ -37,9 +37,12 @@ function TwitterBadge({ twitter }: { twitter: Relationship }) {
   return (
     <Badge
       onPress={() => {
-        window.open(`https://x.com/i/status/${twitter.targetId}`, '_blank')
+        window.open(
+          `https://x.com/${twitter.targetAccount}/status/${twitter.targetId}`,
+          '_blank'
+        )
       }}
-      icon={<X size={16} />}
+      icon={<X size={10} />}
     >
       {twitter.targetAccount}
     </Badge>
@@ -66,7 +69,7 @@ function Badge({
       py="$1.5"
       fd="row"
       ai="center"
-      gap="$2"
+      gap="$1.5"
       onPress={onPress}
       cursor="pointer"
       hoverStyle={{ bg: '$color5' }}

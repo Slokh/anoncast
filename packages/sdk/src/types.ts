@@ -188,242 +188,7 @@ export type Cast = {
   }
   text: string
   timestamp: string
-  embeds: Array<{
-    url?: string
-    metadata?: {
-      _status: string
-      content_type: string
-      content_length: number
-      image: {
-        height_px: number
-        width_px: number
-      }
-      video: {
-        duration_s: number
-        stream: Array<{
-          codec_name: string
-          height_px: number
-          width_px: number
-        }>
-      }
-      html: {
-        favicon: string
-        modifiedTime: string
-        ogArticleAuthor: string
-        ogArticleExpirationTime: string
-        ogArticleModifiedTime: string
-        ogArticlePublishedTime: string
-        ogArticlePublisher: string
-        ogArticleSection: string
-        ogArticleTag: string
-        ogAudio: string
-        ogAudioSecureURL: string
-        ogAudioType: string
-        ogAudioURL: string
-        ogAvailability: string
-        ogDate: string
-        ogDescription: string
-        ogDeterminer: string
-        ogEpisode: string
-        ogImage: Array<{
-          height: string
-          type: string
-          url: string
-          width: string
-          alt: string
-        }>
-        ogLocale: string
-        ogLocaleAlternate: string
-        ogLogo: string
-        ogMovie: string
-        ogPriceAmount: string
-        ogPriceCurrency: string
-        ogProductAvailability: string
-        ogProductCondition: string
-        ogProductPriceAmount: string
-        ogProductPriceCurrency: string
-        ogProductRetailerItemId: string
-        ogSiteName: string
-        ogTitle: string
-        ogType: string
-        ogUrl: string
-        ogVideo: Array<{
-          height: string
-          type: string
-          url: string
-          width: string
-        }>
-        ogVideoActor: string
-        ogVideoActorId: string
-        ogVideoActorRole: string
-        ogVideoDirector: string
-        ogVideoDuration: string
-        ogVideoOther: string
-        ogVideoReleaseDate: string
-        ogVideoSecureURL: string
-        ogVideoSeries: string
-        ogVideoTag: string
-        ogVideoTvShow: string
-        ogVideoWriter: string
-        ogWebsite: string
-        updatedTime: string
-        oembed: {
-          type: string
-          version: string
-          title: string
-          author_name: string
-          author_url: string
-          provider_name: string
-          provider_url: string
-          cache_age: string
-          thumbnail_url: string
-          thumbnail_width: number
-          thumbnail_height: number
-          html: string
-          width: number
-          height: number
-        }
-      }
-    }
-    cast?: {
-      hash: string
-      parent_hash: string
-      parent_url: string
-      root_parent_url: string
-      parent_author: {
-        fid: number
-      }
-      author: {
-        object: string
-        fid: number
-        username: string
-        display_name: string
-        pfp_url: string
-      }
-      text: string
-      timestamp: string
-      type: string
-      embeds: Array<{
-        url?: string
-        metadata?: {
-          _status: string
-          content_type: string
-          content_length: number
-          image: {
-            height_px: number
-            width_px: number
-          }
-          video: {
-            duration_s: number
-            stream: Array<{
-              codec_name: string
-              height_px: number
-              width_px: number
-            }>
-          }
-          html: {
-            favicon: string
-            modifiedTime: string
-            ogArticleAuthor: string
-            ogArticleExpirationTime: string
-            ogArticleModifiedTime: string
-            ogArticlePublishedTime: string
-            ogArticlePublisher: string
-            ogArticleSection: string
-            ogArticleTag: string
-            ogAudio: string
-            ogAudioSecureURL: string
-            ogAudioType: string
-            ogAudioURL: string
-            ogAvailability: string
-            ogDate: string
-            ogDescription: string
-            ogDeterminer: string
-            ogEpisode: string
-            ogImage: Array<{
-              height: string
-              type: string
-              url: string
-              width: string
-              alt: string
-            }>
-            ogLocale: string
-            ogLocaleAlternate: string
-            ogLogo: string
-            ogMovie: string
-            ogPriceAmount: string
-            ogPriceCurrency: string
-            ogProductAvailability: string
-            ogProductCondition: string
-            ogProductPriceAmount: string
-            ogProductPriceCurrency: string
-            ogProductRetailerItemId: string
-            ogSiteName: string
-            ogTitle: string
-            ogType: string
-            ogUrl: string
-            ogVideo: Array<{
-              height: string
-              type: string
-              url: string
-              width: string
-            }>
-            ogVideoActor: string
-            ogVideoActorId: string
-            ogVideoActorRole: string
-            ogVideoDirector: string
-            ogVideoDuration: string
-            ogVideoOther: string
-            ogVideoReleaseDate: string
-            ogVideoSecureURL: string
-            ogVideoSeries: string
-            ogVideoTag: string
-            ogVideoTvShow: string
-            ogVideoWriter: string
-            ogWebsite: string
-            updatedTime: string
-            oembed: {
-              type: string
-              version: string
-              title: string
-              author_name: string
-              author_url: string
-              provider_name: string
-              provider_url: string
-              cache_age: string
-              thumbnail_url: string
-              thumbnail_width: number
-              thumbnail_height: number
-              html: string
-              width: number
-              height: number
-            }
-          }
-        }
-        cast?: {
-          object: string
-          hash: string
-          author: {
-            object: string
-            fid: number
-            username: string
-            display_name: string
-            pfp_url: string
-          }
-        }
-      }>
-      channel: {
-        id: string
-        name: string
-        object: string
-        image_url: string
-        viewer_context: {
-          following: boolean
-          role: string
-        }
-      }
-    }
-  }>
+  embeds: Array<Embed>
   type: string
   frames: Array<{
     version: string
@@ -517,10 +282,12 @@ export type Cast = {
     role: string
   }
   reveal?: Reveal
-  children: Array<Relationship>
-  siblings: Array<Relationship>
-  parent?: string
+  relationships: Array<Relationship>
   credentials: Array<Credential>
+  aggregate: {
+    likes: number
+    replies: number
+  }
 }
 
 export type Reveal = {
@@ -547,6 +314,135 @@ export type Credential = {
     balance: string
   }
   verified_at: string
+}
+
+export type Embed = {
+  url?: string
+  metadata?: {
+    _status: string
+    content_type: string
+    content_length: number
+    image: {
+      height_px: number
+      width_px: number
+    }
+    video: {
+      duration_s: number
+      stream: Array<{
+        codec_name: string
+        height_px: number
+        width_px: number
+      }>
+    }
+    html: {
+      favicon: string
+      modifiedTime: string
+      ogArticleAuthor: string
+      ogArticleExpirationTime: string
+      ogArticleModifiedTime: string
+      ogArticlePublishedTime: string
+      ogArticlePublisher: string
+      ogArticleSection: string
+      ogArticleTag: string
+      ogAudio: string
+      ogAudioSecureURL: string
+      ogAudioType: string
+      ogAudioURL: string
+      ogAvailability: string
+      ogDate: string
+      ogDescription: string
+      ogDeterminer: string
+      ogEpisode: string
+      ogImage: Array<{
+        height: string
+        type: string
+        url: string
+        width: string
+        alt: string
+      }>
+      ogLocale: string
+      ogLocaleAlternate: string
+      ogLogo: string
+      ogMovie: string
+      ogPriceAmount: string
+      ogPriceCurrency: string
+      ogProductAvailability: string
+      ogProductCondition: string
+      ogProductPriceAmount: string
+      ogProductPriceCurrency: string
+      ogProductRetailerItemId: string
+      ogSiteName: string
+      ogTitle: string
+      ogType: string
+      ogUrl: string
+      ogVideo: Array<{
+        height: string
+        type: string
+        url: string
+        width: string
+      }>
+      ogVideoActor: string
+      ogVideoActorId: string
+      ogVideoActorRole: string
+      ogVideoDirector: string
+      ogVideoDuration: string
+      ogVideoOther: string
+      ogVideoReleaseDate: string
+      ogVideoSecureURL: string
+      ogVideoSeries: string
+      ogVideoTag: string
+      ogVideoTvShow: string
+      ogVideoWriter: string
+      ogWebsite: string
+      updatedTime: string
+      oembed: {
+        type: string
+        version: string
+        title: string
+        author_name: string
+        author_url: string
+        provider_name: string
+        provider_url: string
+        cache_age: string
+        thumbnail_url: string
+        thumbnail_width: number
+        thumbnail_height: number
+        html: string
+        width: number
+        height: number
+      }
+    }
+  }
+  cast?: {
+    hash: string
+    parent_hash: string
+    parent_url: string
+    root_parent_url: string
+    parent_author: {
+      fid: number
+    }
+    author: {
+      object: string
+      fid: number
+      username: string
+      display_name: string
+      pfp_url: string
+    }
+    text: string
+    timestamp: string
+    type: string
+    embeds: Array<Embed>
+    channel: {
+      id: string
+      name: string
+      object: string
+      image_url: string
+      viewer_context: {
+        following: boolean
+        role: string
+      }
+    }
+  }
 }
 
 export type CreatePostActionData = {

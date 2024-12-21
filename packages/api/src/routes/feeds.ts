@@ -1,24 +1,23 @@
-import { augmentCasts, createElysia } from '../utils'
+import { createElysia } from '../utils'
 import { t } from 'elysia'
 import { redis } from '../services/redis'
 import { neynar } from '../services/neynar'
 import { Cast } from '../services/neynar/types'
+import { getPostCredentials, getPostRelationships, getPosts, Post } from '@anonworld/db'
 
 export const feedsRoutes = createElysia({ prefix: '/feeds' })
   .get(
     '/:fid/trending',
     async ({ params }) => {
-      let casts: Array<Cast>
-
       const cached = await redis.getTrendingFeed(params.fid)
       if (cached) {
-        casts = JSON.parse(cached)
-      } else {
-        const response = await neynar.getUserCasts(params.fid, 150)
-        casts = await buildTrendingFeed(params.fid, response.casts)
+        return { data: JSON.parse(cached) }
       }
 
-      return { data: await augmentCasts(casts) }
+      const posts = await getFormattedPosts(params.fid)
+      const feed = await buildTrendingFeed(params.fid, posts)
+
+      return { data: feed }
     },
     {
       params: t.Object({
@@ -28,51 +27,118 @@ export const feedsRoutes = createElysia({ prefix: '/feeds' })
   )
   .get(
     '/:fid/new',
-    async ({ params }) => {
-      let casts: Array<Cast>
-
+    async ({ params, query }) => {
       const cached = await redis.getNewFeed(params.fid)
       if (cached) {
-        casts = JSON.parse(cached)
-      } else {
-        const response = await neynar.getUserCasts(params.fid, 150)
-        casts = await buildNewFeed(params.fid, response.casts)
+        return { data: JSON.parse(cached) }
       }
 
-      return { data: await augmentCasts(casts) }
+      const posts = await getFormattedPosts(params.fid)
+      const feed = await buildNewFeed(params.fid, posts)
+
+      return { data: feed }
     },
     {
       params: t.Object({ fid: t.Number() }),
+      query: t.Object({ limit: t.Optional(t.Number()), offset: t.Optional(t.Number()) }),
     }
   )
 
-const buildTrendingFeed = async (fid: number, casts: Array<Cast>) => {
-  const now = Date.now()
+const getFormattedPosts = async (fid: number) => {
+  const posts = await getPosts(fid, {
+    limit: 150,
+    offset: 0,
+  })
 
-  const castScores: Record<string, number> = {}
-  for (const cast of casts) {
-    const ageInHours = (now - new Date(cast.timestamp).getTime()) / 3600000
-    const score = (cast.reactions.likes_count || 0) / (ageInHours + 2) ** 1.5
-    castScores[cast.hash] = score
-  }
-
-  const sortedCasts = Object.entries(castScores)
-    .sort((a, b) => b[1] - a[1])
-    .map(([hash]) => casts.find((c) => c.hash === hash)!)
-    .slice(0, 50)
-
-  await redis.setTrendingFeed(fid, JSON.stringify(sortedCasts))
-
-  return sortedCasts
+  return await formatPosts(posts)
 }
 
-const buildNewFeed = async (fid: number, casts: Array<Cast>) => {
-  await redis.setNewFeed(fid, JSON.stringify(casts))
-  return casts
+const buildTrendingFeed = async (fid: number, posts: Array<Cast>) => {
+  const now = Date.now()
+  const feed = posts
+    .sort((a, b) => {
+      const aScore =
+        (a.aggregate.likes || 0) /
+        ((now - new Date(a.timestamp).getTime()) / 3600000 + 2) ** 1.5
+      const bScore =
+        (b.aggregate.likes || 0) /
+        ((now - new Date(b.timestamp).getTime()) / 3600000 + 2) ** 1.5
+      return bScore - aScore
+    })
+    .slice(0, 25)
+
+  await redis.setTrendingFeed(fid, JSON.stringify(feed))
+  return feed
+}
+
+const buildNewFeed = async (fid: number, posts: Array<Post>) => {
+  await redis.setNewFeed(fid, JSON.stringify(posts))
+  return posts
 }
 
 export const buildFeeds = async (fid: number) => {
-  const response = await neynar.getUserCasts(fid, 150)
-  await buildTrendingFeed(fid, response.casts)
-  await buildNewFeed(fid, response.casts)
+  const posts = await getFormattedPosts(fid)
+  await buildTrendingFeed(fid, posts)
+  await buildNewFeed(fid, posts)
+}
+
+export async function formatPosts(posts: Array<Post>) {
+  const [relationships, credentials] = await Promise.all([
+    getPostRelationships(posts.map((p) => p.hash)),
+    getPostCredentials(posts.map((p) => p.hash)),
+  ])
+
+  const hashes = posts.map((p) => p.hash)
+  for (const relationship of relationships) {
+    if (relationship.target === 'farcaster') {
+      hashes.push(relationship.target_id)
+    }
+  }
+  const response = await neynar.getBulkCasts(hashes)
+
+  const augmentedPosts: Array<any> = []
+  for (const post of posts) {
+    const postRelationships = relationships.filter((r) => r.post_hash === post.hash)
+    const postCredentials = credentials.filter(
+      (c) => c.post_credentials.post_hash === post.hash
+    )
+
+    const primaryCast = response.result.casts.find((cast) => cast.hash === post.hash)
+    if (!primaryCast) continue
+
+    const relatedCasts = response.result.casts.filter((cast) =>
+      postRelationships.some((r) => r.target_id === cast.hash)
+    )
+
+    augmentedPosts.push({
+      ...primaryCast,
+      reveal: post.reveal_hash
+        ? {
+            ...(post.reveal_metadata || {}),
+            revealHash: post.reveal_hash,
+            input: JSON.stringify(post.data),
+            revealedAt: post.updated_at.toISOString(),
+          }
+        : undefined,
+      credentials: postCredentials.map((c) => ({
+        ...c.credential_instances,
+        proof: undefined,
+      })),
+      relationships: postRelationships.map((r) => ({
+        target: r.target,
+        targetAccount: r.target_account,
+        targetId: r.target_id,
+      })),
+      aggregate: {
+        likes:
+          primaryCast.reactions.likes_count +
+          relatedCasts.reduce((acc, c) => acc + c.reactions.likes_count, 0),
+        replies:
+          primaryCast.replies.count +
+          relatedCasts.reduce((acc, c) => acc + c.replies.count, 0),
+      },
+    })
+  }
+
+  return augmentedPosts
 }

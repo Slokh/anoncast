@@ -412,6 +412,39 @@ export type Cast = {
     following: boolean
     role: string
   }
+  reveal?: Reveal
+  relationships: Array<Relationship>
+  credentials: Array<Credential>
+  aggregate: {
+    likes: number
+    replies: number
+  }
+}
+
+export type Reveal = {
+  revealHash: string
+  input: string
+  phrase?: string
+  signature?: string
+  address?: string
+  revealedAt: string
+}
+
+export type Relationship = {
+  target: string
+  targetAccount: string
+  targetId: string
+}
+
+export type Credential = {
+  id: string
+  credential_id: string
+  metadata: {
+    chainId: string
+    tokenAddress: `0x${string}`
+    balance: string
+  }
+  verified_at: string
 }
 
 export type GetChannelResponse = {

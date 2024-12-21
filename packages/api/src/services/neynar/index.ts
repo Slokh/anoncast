@@ -6,6 +6,7 @@ import {
   GetChannelResponse,
   GetUserByUsernameResponse,
   GetUsersResponse,
+  GetBulkCastsResponse,
 } from './types'
 import { getSignerForFid } from '@anonworld/db'
 
@@ -96,6 +97,12 @@ class NeynarService {
   async getUserCasts(fid: number, limit = 150, cursor?: string) {
     return this.makeRequest<GetCastsResponse>(
       `/farcaster/feed/user/casts?limit=${limit}&include_replies=true&fid=${fid}${cursor ? `&cursor=${cursor}` : ''}`
+    )
+  }
+
+  async getBulkCasts(hashes: string[]) {
+    return this.makeRequest<GetBulkCastsResponse>(
+      `/farcaster/casts?casts=${hashes.join(',')}`
     )
   }
 

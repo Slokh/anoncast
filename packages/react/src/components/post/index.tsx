@@ -2,9 +2,10 @@ import { Cast } from '../../types'
 import { formatAmount, timeAgo } from '../../utils'
 import { Text, View, XStack, YStack } from '@anonworld/ui'
 import { Heart, MessageSquare } from '@tamagui/lucide-icons'
-import { CredentialBadge } from './credential'
+import { CredentialBadge } from './credentials'
 import { PostActions } from './actions'
 import { PostRelationships } from './relationships'
+import { PostEmbed } from './embeds'
 
 function getUserId(post: Cast) {
   const credentialId = post.credentials?.[0]?.id
@@ -15,16 +16,12 @@ function getUserId(post: Cast) {
   for (let i = 2; i < credentialId.length - 1; i += 2) {
     const num = Number.parseInt(credentialId.slice(i, i + 2), 16)
     if (!Number.isNaN(num)) {
-      // num % 62 gives us 0-61
       const code = num % 62
       if (code < 26) {
-        // 0-25 -> a-z
         str += String.fromCharCode(97 + code)
       } else if (code < 52) {
-        // 26-51 -> A-Z
         str += String.fromCharCode(65 + (code - 26))
       } else {
-        // 52-61 -> 0-9
         str += String.fromCharCode(48 + (code - 52))
       }
     }
@@ -74,6 +71,9 @@ export function Post({ post }: { post: Cast }) {
         ))}
       </XStack>
       <Text lineHeight={22}>{post.text}</Text>
+      {post.embeds?.map((embed) => (
+        <PostEmbed key={embed.url} embed={embed} />
+      ))}
       <XStack jc="space-between" ai="center">
         <XStack ai="center" gap="$4">
           <Text fos="$2" fow="400" col="$color11">
@@ -82,13 +82,13 @@ export function Post({ post }: { post: Cast }) {
           <XStack ai="center" gap="$2">
             <Heart size={16} col="$color11" />
             <Text fos="$2" fow="400" col="$color11">
-              {formatAmount(post.reactions.likes_count)}
+              {formatAmount(post.aggregate.likes)}
             </Text>
           </XStack>
           <XStack ai="center" gap="$2">
             <MessageSquare size={16} col="$color11" />
             <Text fos="$2" fow="400" col="$color11">
-              {formatAmount(post.replies.count)}
+              {formatAmount(post.aggregate.replies)}
             </Text>
           </XStack>
         </XStack>

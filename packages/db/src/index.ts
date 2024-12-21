@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
 import {
   actionExecutionsTable,
   actionsTable,
@@ -58,6 +58,21 @@ export const getSignerForFid = async (fid: number) => {
   return signer
 }
 
+export const getPosts = async (
+  fid: number,
+  opts: { limit: number; offset: number }
+): Promise<Post[]> => {
+  const posts = await db
+    .select()
+    .from(postsTable)
+    .where(and(isNull(postsTable.deleted_at), eq(postsTable.fid, fid)))
+    .orderBy(desc(postsTable.created_at))
+    .limit(opts.limit)
+    .offset(opts.offset)
+
+  return posts as Post[]
+}
+
 export const createPost = async (
   params: Omit<typeof postsTable.$inferInsert, 'created_at' | 'updated_at'>
 ) => {
@@ -90,18 +105,6 @@ export const getBulkPosts = async (hashes: string[]) => {
     .where(and(inArray(postsTable.hash, hashes), isNull(postsTable.deleted_at)))
 }
 
-export const getPostChildren = async (hashes: string[]) => {
-  return await db
-    .select()
-    .from(postRelationshipsTable)
-    .where(
-      and(
-        inArray(postRelationshipsTable.post_hash, hashes),
-        isNull(postRelationshipsTable.deleted_at)
-      )
-    )
-}
-
 export const getPostParent = async (hash: string) => {
   const [parent] = await db
     .select()
@@ -109,40 +112,6 @@ export const getPostParent = async (hash: string) => {
     .where(eq(postRelationshipsTable.target_id, hash))
     .limit(1)
   return parent
-}
-
-export const getPostParentAndSiblings = async (hashes: string[]) => {
-  const parents = await db
-    .select()
-    .from(postRelationshipsTable)
-    .where(
-      and(
-        inArray(postRelationshipsTable.target_id, hashes),
-        isNull(postRelationshipsTable.deleted_at)
-      )
-    )
-  const children = await getPostChildren(parents.map((p) => p.post_hash))
-
-  const result: Record<
-    string,
-    {
-      siblings: (typeof postRelationshipsTable.$inferSelect)[]
-      parent: typeof postRelationshipsTable.$inferSelect
-    }
-  > = {}
-  for (const hash of hashes) {
-    const parent = parents.find((p) => p.target_id === hash)
-    if (!parent) continue
-    const siblings = children.filter(
-      (c) => c.post_hash === parent.post_hash && c.target_id !== hash
-    )
-    result[hash] = {
-      siblings,
-      parent,
-    }
-  }
-
-  return result
 }
 
 export const revealPost = async (
@@ -180,6 +149,13 @@ export const createPostRelationship = async (
       ],
       set: { deleted_at: null },
     })
+}
+
+export const getPostRelationships = async (hashes: string[]) => {
+  return await db
+    .select()
+    .from(postRelationshipsTable)
+    .where(inArray(postRelationshipsTable.post_hash, hashes))
 }
 
 export const getPostRelationship = async (
@@ -231,27 +207,14 @@ export const createPostCredentials = async (
 }
 
 export const getPostCredentials = async (hashes: string[]) => {
-  const postCredentials = await db
+  return await db
     .select()
     .from(postCredentialsTable)
+    .innerJoin(
+      credentialInstancesTable,
+      eq(postCredentialsTable.credential_id, credentialInstancesTable.id)
+    )
     .where(inArray(postCredentialsTable.post_hash, hashes))
-
-  const credentialIds = postCredentials.map((p) => p.credential_id!).filter(Boolean)
-
-  const credentials = await db
-    .select()
-    .from(credentialInstancesTable)
-    .where(inArray(credentialInstancesTable.id, credentialIds))
-
-  return hashes.map((hash) => ({
-    hash,
-    credentials: postCredentials
-      .filter((p) => p.post_hash === hash)
-      .map((p) => p.credential_id!)
-      .filter(Boolean)
-      .map((id) => credentials.find((c) => c.id === id)!)
-      .filter(Boolean),
-  }))
 }
 
 export const getTwitterAccount = async (username: string) => {

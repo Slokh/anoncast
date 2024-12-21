@@ -20,19 +20,19 @@ export class RedisService {
   }
 
   async getTrendingFeed(fid: number) {
-    return this.client.get(`feed:trending:${fid}`)
+    return this.client.get(`feed:trending:v2:${fid}`)
   }
 
   async setTrendingFeed(fid: number, feed: string) {
-    return this.client.set(`feed:trending:${fid}`, feed)
+    return this.client.set(`feed:trending:v2:${fid}`, feed)
   }
 
   async getNewFeed(fid: number) {
-    return this.client.get(`feed:new:${fid}`)
+    return this.client.get(`feed:new:v2:${fid}`)
   }
 
   async setNewFeed(fid: number, feed: string) {
-    return this.client.set(`feed:new:${fid}`, feed, 'EX', 30)
+    return this.client.set(`feed:new:v2:${fid}`, feed, 'EX', 30)
   }
 
   async actionOccurred(actionId: string, hash: string) {
