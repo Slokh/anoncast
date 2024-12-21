@@ -41,6 +41,10 @@ export const getAction = async (actionId: string) => {
   return action
 }
 
+export const getAvailableActions = async () => {
+  return await db.select().from(actionsTable).where(isNull(actionsTable.trigger))
+}
+
 export const getActionsForTrigger = async (trigger: string) => {
   return await db.select().from(actionsTable).where(eq(actionsTable.trigger, trigger))
 }

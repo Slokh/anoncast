@@ -487,8 +487,12 @@ export type Channel = {
   }
 }
 
-export type GetUserResponse = {
+export type GetUserByUsernameResponse = {
   user: User
+}
+
+export type GetUsersResponse = {
+  users: Array<User>
 }
 
 export type User = {

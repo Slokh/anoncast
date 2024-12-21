@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSDK } from '../sdk'
+import { useSDK } from '../providers/sdk'
 import { useAccount } from 'wagmi'
 import { Credential, PerformAction, PerformActionData } from '@anonworld/sdk/types'
 import { parseUnits } from 'viem'

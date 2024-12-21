@@ -1,10 +1,11 @@
 import {
   GetCastResponse,
   CreateCastResponse,
-  GetUserResponse,
   GetBulkUsersResponse,
   GetCastsResponse,
   GetChannelResponse,
+  GetUserByUsernameResponse,
+  GetUsersResponse,
 } from './types'
 import { getSignerForFid } from '@anonworld/db'
 
@@ -71,7 +72,7 @@ class NeynarService {
   }
 
   async getUserByUsername(username: string) {
-    return this.makeRequest<GetUserResponse>(
+    return this.makeRequest<GetUserByUsernameResponse>(
       `/farcaster/user/by_username?username=${username}`
     )
   }
@@ -80,6 +81,10 @@ class NeynarService {
     return this.makeRequest<GetCastResponse>(
       `/farcaster/cast?type=${hash.startsWith('0x') ? 'hash' : 'url'}&identifier=${hash}`
     )
+  }
+
+  async getUser(fid: number) {
+    return this.makeRequest<GetUsersResponse>(`/farcaster/user/bulk?fids=${fid}`)
   }
 
   async getBulkUsers(addresses: string[]) {

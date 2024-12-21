@@ -1,7 +1,6 @@
 'use client'
 
-import { Cast } from '@anonworld/react'
-import { useQuery } from '@tanstack/react-query'
+import { Cast, usePosts } from '../../../../packages/react/src'
 import { useState } from 'react'
 import AnimatedTabs from './animated-tabs'
 import { Skeleton } from '../ui/skeleton'
@@ -9,32 +8,24 @@ import { Post } from '../post'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { BEST_OF_FID, LAUNCH_FID } from '@/lib/utils'
-import { useSDK } from '@anonworld/react'
+
 export function PostFeed({
   defaultTab = 'trending',
 }: {
   defaultTab?: 'new' | 'trending'
 }) {
-  const { sdk } = useSDK()
   const [selected, setSelected] = useState<'new' | 'trending'>(defaultTab)
   const router = useRouter()
 
-  const { data: trendingPosts, isLoading: isTrendingLoading } = useQuery({
-    queryKey: ['trending'],
-    queryFn: async (): Promise<Cast[]> => {
-      const response = await sdk.getTrendingFeed(BEST_OF_FID)
-      return response?.data?.data || []
-    },
+  const { data: trendingPosts, isLoading: isTrendingLoading } = usePosts({
+    fid: BEST_OF_FID,
+    type: 'trending',
   })
 
-  const { data: newPosts, isLoading: isNewLoading } = useQuery({
-    queryKey: ['posts'],
-    queryFn: async (): Promise<Cast[]> => {
-      const response = await sdk.getNewFeed(BEST_OF_FID)
-      return (response?.data?.data || [])?.filter(
-        ({ text }) => !text.match(/.*@clanker.*(launch|deploy|make).*/is)
-      )
-    },
+  const { data: newPosts, isLoading: isNewLoading } = usePosts({
+    fid: BEST_OF_FID,
+    type: 'new',
+    filter: ({ text }) => !text.match(/.*@clanker.*(launch|deploy|make).*/is),
   })
 
   return (
@@ -74,25 +65,18 @@ export function PromotedFeed({
 }: {
   defaultTab?: 'new' | 'promoted'
 }) {
-  const { sdk } = useSDK()
   const [selected, setSelected] = useState<'new' | 'promoted'>(defaultTab)
   const router = useRouter()
-  const { data: promotedLaunches, isLoading: isPromotedLoading } = useQuery({
-    queryKey: ['launches', 'promoted'],
-    queryFn: async (): Promise<Cast[]> => {
-      const response = await sdk.getNewFeed(LAUNCH_FID)
-      return response?.data?.data || []
-    },
+  const { data: promotedLaunches, isLoading: isPromotedLoading } = usePosts({
+    fid: LAUNCH_FID,
+    type: 'new',
   })
 
-  const { data: newLaunches, isLoading: isNewLoading } = useQuery({
-    queryKey: ['launches', 'new'],
-    queryFn: async (): Promise<Cast[]> => {
-      const response = await sdk.getNewFeed(BEST_OF_FID)
-      return (response?.data?.data || [])?.filter(({ text }) =>
-        text.toLowerCase().match(/.*@clanker.*(launch|deploy|make).*/is)
-      )
-    },
+  const { data: newLaunches, isLoading: isNewLoading } = usePosts({
+    fid: BEST_OF_FID,
+    type: 'new',
+    filter: ({ text }) =>
+      !!text.toLowerCase().match(/.*@clanker.*(launch|deploy|make).*/is),
   })
 
   return (

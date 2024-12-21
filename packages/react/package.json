@@ -7,16 +7,19 @@
   },
   "dependencies": {
     "@anonworld/sdk": "*",
+    "@anonworld/ui": "*",
+    "@tamagui/lucide-icons": "^1.116.12",
+    "@tamagui/portal": "^1.116.12",
     "@tanstack/react-query": "^5.62.8",
-    "react": "^18",
-    "react-dom": "^18",
-    "viem": "^2.21.53",
-    "wagmi": "^2.13.3"
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "viem": "^2.21.56",
+    "wagmi": "^2.14.3"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "18.3.1",
+    "@types/react-dom": "18.3.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.16",
     "postcss": "^8",

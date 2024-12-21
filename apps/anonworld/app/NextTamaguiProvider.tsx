@@ -10,7 +10,7 @@ import { StyleSheet } from 'react-native'
 import { useServerInsertedHTML } from 'next/navigation'
 import { NextThemeProvider, useRootTheme } from '@tamagui/next-theme'
 import { config } from '@anonworld/ui'
-import { Provider } from '@/components/providers'
+import { Providers } from '@/components/providers'
 
 export const NextTamaguiProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useRootTheme()
@@ -43,12 +43,12 @@ export const NextTamaguiProvider = ({ children }: { children: ReactNode }) => {
           }}
         />
 
-        <script
+        {/* <script
           dangerouslySetInnerHTML={{
             // avoid flash of animated things on enter:
             __html: `document.documentElement.classList.add('t_unmounted')`,
           }}
-        />
+        /> */}
 
         <style jsx global>{`
           html {
@@ -62,15 +62,12 @@ export const NextTamaguiProvider = ({ children }: { children: ReactNode }) => {
   return (
     <NextThemeProvider
       skipNextHead
-      // change default theme (system) here:
-      // defaultTheme="dark"
+      defaultTheme="dark"
       onChangeTheme={(next) => {
         setTheme(next as any)
       }}
     >
-      <Provider disableRootThemeClass defaultTheme={theme}>
-        {children}
-      </Provider>
+      <Providers theme={theme}> {children}</Providers>
     </NextThemeProvider>
   )
 }

@@ -4,7 +4,7 @@ import {
   Cast,
   Channel,
   Credential,
-  Identity,
+  User,
   PerformAction,
   RequestConfig,
   UploadImageResponse,
@@ -116,7 +116,11 @@ export class Api {
   }
 
   async getFarcasterIdentity(address: string) {
-    return await this.request<Identity>(`/farcaster/identities?address=${address}`)
+    return await this.request<User>(`/farcaster/identities?address=${address}`)
+  }
+
+  async getFarcasterUser(fid: number) {
+    return await this.request<User>(`/farcaster/users/${fid}`)
   }
 
   async getFarcasterChannel(channelId: string) {
@@ -136,6 +140,10 @@ export class Api {
 
   async getAction(actionId: string) {
     return await this.request<Action>(`/actions/${actionId}`)
+  }
+
+  async getActions() {
+    return await this.request<{ data: Action[] }>('/actions')
   }
 
   async createCredential({

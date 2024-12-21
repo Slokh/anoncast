@@ -26,7 +26,7 @@ export type UploadImageResponse = {
   error?: string
 }
 
-export type Identity = {
+export type User = {
   object: string
   fid: number
   username: string
@@ -542,7 +542,8 @@ export type Credential = {
   id: string
   credential_id: string
   metadata: {
-    tokenAddress: string
+    chainId: string
+    tokenAddress: `0x${string}`
     balance: string
   }
   verified_at: string
@@ -588,10 +589,8 @@ export type PerformAction = {
   data: PerformActionData
 }
 
-export type Action = {
+type BaseAction = {
   id: string
-  type: string
-  metadata: unknown
   created_at: Date
   updated_at: Date
   credential_id: string | null
@@ -599,4 +598,55 @@ export type Action = {
     minimumBalance: string
   } | null
   trigger: string
+}
+
+export type ActionTargetPost = {
+  post: {
+    text: {
+      eq?: string[]
+      ne?: string[]
+    }
+  }
+}
+
+export type Action =
+  | (BaseAction & {
+      type: ActionType.COPY_POST_TWITTER
+      metadata: {
+        twitter: string
+        target: ActionTargetPost
+      }
+    })
+  | (BaseAction & {
+      type: ActionType.DELETE_POST_TWITTER
+      metadata: {
+        twitter: string
+      }
+    })
+  | (BaseAction & {
+      type: ActionType.COPY_POST_FARCASTER
+      metadata: {
+        fid: string
+        target: ActionTargetPost
+      }
+    })
+  | (BaseAction & {
+      type: ActionType.DELETE_POST_FARCASTER
+      metadata: {
+        fid: string
+      }
+    })
+  | (BaseAction & {
+      type: ActionType.CREATE_POST
+      metadata: {
+        target: ActionTargetPost
+      }
+    })
+
+export enum ActionType {
+  CREATE_POST = 'CREATE_POST',
+  COPY_POST_TWITTER = 'COPY_POST_TWITTER',
+  COPY_POST_FARCASTER = 'COPY_POST_FARCASTER',
+  DELETE_POST_TWITTER = 'DELETE_POST_TWITTER',
+  DELETE_POST_FARCASTER = 'DELETE_POST_FARCASTER',
 }

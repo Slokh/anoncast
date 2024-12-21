@@ -23,8 +23,14 @@ export function Header() {
       jc="space-between"
       ai="center"
       fd="row"
-      borderBottomWidth="$0.5"
-      borderColor="$borderColor"
+      bbw="$0.5"
+      bc="$borderColor"
+      bg="$background"
+      $platform-web={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+      }}
     >
       <View fd="row" gap="$8" ai="center">
         <Link href="/" style={{ textDecoration: 'none' }}>
