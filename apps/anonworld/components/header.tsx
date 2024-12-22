@@ -7,6 +7,8 @@ import { usePathname } from 'next/navigation'
 
 enum Pathname {
   HOME = '/',
+  NEW = '/new',
+  POST = '/posts',
   ACCOUNTS = '/accounts',
   CREDENTIALS = '/credentials',
   ABOUT = '/about',
@@ -48,7 +50,11 @@ export function Header() {
               py="$2"
               px="$3"
               br="$12"
-              themeInverse={pathname === Pathname.HOME}
+              themeInverse={
+                pathname === Pathname.HOME ||
+                pathname === Pathname.NEW ||
+                pathname.startsWith(Pathname.POST)
+              }
               hoverStyle={{ bg: '$color5' }}
             >
               <Text fow="500">Posts</Text>

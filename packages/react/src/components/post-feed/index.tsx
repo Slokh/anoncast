@@ -1,6 +1,6 @@
-import { usePosts } from '../hooks/use-posts'
+import { usePosts } from '../../hooks/use-posts'
 import { YStack } from '@anonworld/ui'
-import { Post } from './post'
+import { Post } from '../post'
 
 export function PostFeed({
   fid,

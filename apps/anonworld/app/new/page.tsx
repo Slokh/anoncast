@@ -17,10 +17,10 @@ export default function Home() {
 
   return (
     <View maxWidth={700} mx="auto" my="$3" gap="$3">
-      <PostFeedSelector selected="Trending" onSelect={handleSelect} />
+      <PostFeedSelector selected="New" onSelect={handleSelect} />
       <PostFeed
         fid={899289}
-        type="trending"
+        type="new"
         onPress={(hash) => router.push(`/posts/${hash}`)}
       />
     </View>

@@ -19,13 +19,7 @@ export function PostActions({ post }: { post: Cast }) {
           e.stopPropagation()
         }}
       >
-        <View
-          bg="$background"
-          p="$2"
-          br="$12"
-          hoverStyle={{ bg: '$color5' }}
-          cursor="pointer"
-        >
+        <View p="$2" br="$12" hoverStyle={{ bg: '$color5' }} cursor="pointer">
           <MoreHorizontal size={20} />
         </View>
       </Popover.Trigger>
@@ -47,7 +41,7 @@ export function PostActions({ post }: { post: Cast }) {
         overflow="hidden"
       >
         <YGroup>
-          {data?.map((action) => (
+          {actions?.map((action) => (
             <ActionItem key={action.id} post={post} action={action} />
           ))}
         </YGroup>

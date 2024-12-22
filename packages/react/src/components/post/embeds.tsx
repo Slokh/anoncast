@@ -7,16 +7,17 @@ import { X } from '../svg/x'
 export function PostEmbed({ embed }: { embed: Embed }) {
   if (embed.cast) {
     const filteredEmbeds = embed.cast.embeds?.filter((e) => !e.cast)
+    let text = embed.cast.text
+    if (filteredEmbeds) {
+      for (const embed of filteredEmbeds) {
+        if (embed.url) {
+          text = text.replace(embed.url, '')
+        }
+      }
+    }
+
     return (
-      <YStack
-        theme="surface1"
-        bg="$background"
-        bc="$borderColor"
-        bw="$0.5"
-        br="$4"
-        p="$3"
-        gap="$2"
-      >
+      <YStack theme="surface1" bc="$borderColor" bw="$0.5" br="$4" p="$3" gap="$2">
         <XStack ai="center" gap="$2">
           <Avatar size="$1" circular>
             <Avatar.Image src={embed.cast.author.pfp_url} />
@@ -29,7 +30,7 @@ export function PostEmbed({ embed }: { embed: Embed }) {
             {timeAgo(embed.cast.timestamp)}
           </Text>
         </XStack>
-        <Text lineHeight={22}>{embed.cast.text}</Text>
+        <Text lineHeight={22}>{text}</Text>
         {filteredEmbeds?.map((embed) => (
           <PostEmbed key={embed.url} embed={embed} />
         ))}
@@ -141,15 +142,7 @@ function TwitterEmbed({ tweetId, username }: { tweetId: string; username: string
   if (!data) return null
 
   return (
-    <YStack
-      theme="surface1"
-      bg="$background"
-      bc="$borderColor"
-      bw="$0.5"
-      br="$4"
-      p="$3"
-      gap="$2"
-    >
+    <YStack theme="surface1" bc="$borderColor" bw="$0.5" br="$4" p="$3" gap="$2">
       <XStack ai="center" gap="$2">
         <X size={16} />
         <Text fos="$2" fow="500">

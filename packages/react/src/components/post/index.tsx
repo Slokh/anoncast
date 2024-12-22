@@ -8,6 +8,15 @@ import { PostRelationships } from './relationships'
 import { PostEmbed } from './embeds'
 
 export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
+  let text = post.text
+  if (post.embeds) {
+    for (const embed of post.embeds) {
+      if (embed.url) {
+        text = text.replace(embed.url, '')
+      }
+    }
+  }
+
   return (
     <YStack
       theme="surface1"
@@ -32,7 +41,7 @@ export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
           <CredentialBadge key={credential.id} credential={credential} />
         ))}
       </XStack>
-      <Text lineHeight={22}>{post.text}</Text>
+      <Text lineHeight={22}>{text}</Text>
       {post.embeds?.map((embed) => (
         <PostEmbed key={embed.url} embed={embed} />
       ))}
