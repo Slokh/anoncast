@@ -155,7 +155,12 @@ export const getPostRelationships = async (hashes: string[]) => {
   return await db
     .select()
     .from(postRelationshipsTable)
-    .where(inArray(postRelationshipsTable.post_hash, hashes))
+    .where(
+      and(
+        inArray(postRelationshipsTable.post_hash, hashes),
+        isNull(postRelationshipsTable.deleted_at)
+      )
+    )
 }
 
 export const getPostRelationship = async (

@@ -445,6 +445,10 @@ export type Embed = {
   }
 }
 
+export type ConversationCast = Cast & {
+  direct_replies: Array<ConversationCast>
+}
+
 export type CreatePostActionData = {
   text?: string
   embeds?: string[]

@@ -5,8 +5,8 @@ import { X } from '../svg/x'
 import { useFarcasterUser } from '../../hooks/use-farcaster-user'
 
 export function PostRelationships({ post }: { post: Cast }) {
-  const farcaster = post.relationships.find((c) => c.target === 'farcaster')
-  const twitter = post.relationships.find((c) => c.target === 'twitter')
+  const farcaster = post.relationships?.find((c) => c.target === 'farcaster')
+  const twitter = post.relationships?.find((c) => c.target === 'twitter')
 
   return (
     <View fd="row" gap="$2" ai="center">

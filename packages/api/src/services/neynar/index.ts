@@ -7,6 +7,7 @@ import {
   GetUserByUsernameResponse,
   GetUsersResponse,
   GetBulkCastsResponse,
+  GetConversationResponse,
 } from './types'
 import { getSignerForFid } from '@anonworld/db'
 
@@ -198,6 +199,12 @@ class NeynarService {
     return {
       success: true,
     }
+  }
+
+  async getConversation(identifier: string) {
+    return this.makeRequest<GetConversationResponse>(
+      `/farcaster/cast/conversation?identifier=${identifier}&type=hash&reply_depth=5&include_chronological_parent_casts=false&sort_type=desc_chron&limit=50`
+    )
   }
 }
 

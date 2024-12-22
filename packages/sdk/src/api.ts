@@ -8,6 +8,7 @@ import {
   PerformAction,
   RequestConfig,
   UploadImageResponse,
+  ConversationCast,
 } from './types'
 
 export class Api {
@@ -109,6 +110,12 @@ export class Api {
 
   async getPost(hash: string) {
     return await this.request<Cast>(`/posts/${hash}`)
+  }
+
+  async getPostConversation(hash: string) {
+    return await this.request<{ data: Array<ConversationCast> }>(
+      `/posts/${hash}/conversation`
+    )
   }
 
   async getFarcasterCast(identifier: string) {

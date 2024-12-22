@@ -11,6 +11,14 @@ export type CreateCastResponse =
       text: string
     }
 
+export type GetConversationResponse = {
+  conversation: { cast: ConversationCast }
+}
+
+export type ConversationCast = Cast & {
+  direct_replies: Array<ConversationCast>
+}
+
 export interface GetCastResponse {
   cast: Cast
 }

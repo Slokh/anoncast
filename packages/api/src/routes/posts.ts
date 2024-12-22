@@ -2,7 +2,7 @@ import { createElysia } from '../utils'
 import { t } from 'elysia'
 import { verifyMessage } from 'viem'
 import { neynar } from '../services/neynar'
-import { getPost, revealPost } from '@anonworld/db'
+import { getPost, getPostRelationships, revealPost } from '@anonworld/db'
 import { formatPosts } from './feeds'
 
 export const postsRoutes = createElysia({ prefix: '/posts' })
@@ -14,6 +14,34 @@ export const postsRoutes = createElysia({ prefix: '/posts' })
         throw new Error('Post not found')
       }
       return (await formatPosts([post]))[0]
+    },
+    {
+      params: t.Object({
+        hash: t.String(),
+      }),
+    }
+  )
+  .get(
+    '/:hash/conversation',
+    async ({ params }) => {
+      const relationships = await getPostRelationships([params.hash])
+      const hashes = [
+        params.hash,
+        ...relationships.filter((r) => r.target === 'farcaster').map((r) => r.target_id),
+      ]
+      const conversations = await Promise.all(
+        hashes.map(async (hash) => {
+          const conversation = await neynar.getConversation(hash)
+          return conversation.conversation.cast.direct_replies
+        })
+      )
+      return {
+        data: conversations
+          .flat()
+          .sort(
+            (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          ),
+      }
     },
     {
       params: t.Object({

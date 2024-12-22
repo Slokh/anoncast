@@ -59,7 +59,15 @@ export function PostEmbed({ embed }: { embed: Embed }) {
     }
   }
 
-  return <Text>{embed.url}</Text>
+  return (
+    <Text
+      col="$color11"
+      onPress={() => window.open(embed.url, '_blank')}
+      hoverStyle={{ textDecorationLine: 'underline' }}
+    >
+      {embed.url}
+    </Text>
+  )
 }
 
 function TwitterEmbed({ tweetId, username }: { tweetId: string; username: string }) {
