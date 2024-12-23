@@ -308,6 +308,10 @@ export type Relationship = {
 export type Credential = {
   id: string
   credential_id: string
+  proof: {
+    proof: number[]
+    publicInputs: string[]
+  }
   metadata: {
     chainId: string
     tokenAddress: `0x${string}`

@@ -1,8 +1,8 @@
 import { Embed } from '@anonworld/sdk/types'
-import { timeAgo } from '../../utils'
+import { timeAgo } from '../../../utils'
 import { Avatar, Image, Text, View, XStack, YStack } from '@anonworld/ui'
 import { useQuery } from '@tanstack/react-query'
-import { X } from '../svg/x'
+import { X } from '../../svg/x'
 
 export function PostEmbed({ embed }: { embed: Embed }) {
   if (embed.cast) {
@@ -40,12 +40,13 @@ export function PostEmbed({ embed }: { embed: Embed }) {
 
   if (embed.metadata?.image) {
     return (
-      <View>
+      <View ai="center">
         <Image
           src={embed.url}
-          f={1}
-          aspectRatio={embed.metadata.image.width_px / embed.metadata.image.height_px}
           br="$4"
+          width={embed.metadata.image.width_px}
+          aspectRatio={embed.metadata.image.width_px / embed.metadata.image.height_px}
+          maxWidth="100%"
         />
       </View>
     )
@@ -159,6 +160,8 @@ function TwitterEmbed({ tweetId, username }: { tweetId: string; username: string
           src={photo.url}
           f={1}
           aspectRatio={photo.width / photo.height}
+          maxWidth={photo.width}
+          maxHeight={photo.height}
           br="$4"
         />
       ))}

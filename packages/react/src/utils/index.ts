@@ -1,4 +1,8 @@
+import { base } from 'viem/chains'
 import { Action, Cast, Credential } from '../types'
+import { extractChain } from 'viem/utils'
+
+export const chains = [base]
 
 export function timeAgo(timestamp: string): string {
   const now = new Date()
@@ -51,5 +55,35 @@ export function getUsableCredential(credentials: Credential[], action: Action) {
     ) {
       return credential
     }
+  }
+}
+
+export function formatHexId(hex: string) {
+  let str = ''
+  for (let i = 2; i < hex.length - 1; i += 2) {
+    const num = Number.parseInt(hex.slice(i, i + 2), 16)
+    if (!Number.isNaN(num)) {
+      const code = num % 62
+      if (code < 26) {
+        str += String.fromCharCode(97 + code)
+      } else if (code < 52) {
+        str += String.fromCharCode(65 + (code - 26))
+      } else {
+        str += String.fromCharCode(48 + (code - 52))
+      }
+    }
+  }
+  return str.slice(0, 8)
+}
+
+export function toHslColors(str: string) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const hue = Math.abs(hash % 360)
+  return {
+    background: `hsl(${hue}, 70%, 85%)`,
+    color: `hsl(${hue}, 70%, 15%)`,
   }
 }

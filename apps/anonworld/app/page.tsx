@@ -1,8 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { PostFeed, PostFeedSelector } from '@anonworld/react'
-import { View } from '@anonworld/ui'
+import { PostComposer, PostFeed, PostFeedSelector } from '@anonworld/react'
+import { View, XStack } from '@anonworld/ui'
 
 export default function Home() {
   const router = useRouter()
@@ -17,7 +17,10 @@ export default function Home() {
 
   return (
     <View maxWidth={700} mx="auto" my="$3" gap="$3">
-      <PostFeedSelector selected="Trending" onSelect={handleSelect} />
+      <XStack ai="center" jc="space-between">
+        <PostFeedSelector selected="Trending" onSelect={handleSelect} />
+        <PostComposer />
+      </XStack>
       <PostFeed
         fid={899289}
         type="trending"

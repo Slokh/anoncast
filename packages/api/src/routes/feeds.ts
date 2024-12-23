@@ -50,6 +50,8 @@ const getFormattedPosts = async (fid: number) => {
     offset: 0,
   })
 
+  if (posts.length === 0) return []
+
   return await formatPosts(posts)
 }
 
@@ -78,6 +80,7 @@ const buildNewFeed = async (fid: number, posts: Array<Post>) => {
 
 export const buildFeeds = async (fid: number) => {
   const posts = await getFormattedPosts(fid)
+  if (posts.length === 0) return
   await buildTrendingFeed(fid, posts)
   await buildNewFeed(fid, posts)
 }
@@ -94,6 +97,7 @@ export async function formatPosts(posts: Array<Post>) {
       hashes.push(relationship.target_id)
     }
   }
+
   const response = await neynar.getBulkCasts(hashes)
 
   const augmentedPosts: Array<any> = []

@@ -1,7 +1,7 @@
 import { MoreHorizontal } from '@tamagui/lucide-icons'
 import { Popover, Text, View, YGroup } from '@anonworld/ui'
-import { Cast } from '../../types'
-import { Farcaster } from '../svg/farcaster'
+import { Cast } from '../../../types'
+import { Farcaster } from '../../svg/farcaster'
 import { NamedExoticComponent } from 'react'
 
 export function PostActions({ post }: { post: Cast }) {

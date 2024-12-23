@@ -1,8 +1,9 @@
-import { Cast, Relationship } from '../../types'
-import { Text, View } from '@anonworld/ui'
-import { Farcaster } from '../svg/farcaster'
-import { X } from '../svg/x'
-import { useFarcasterUser } from '../../hooks/use-farcaster-user'
+import { Cast, Relationship } from '../../../types'
+import { View } from '@anonworld/ui'
+import { Farcaster } from '../../svg/farcaster'
+import { X } from '../../svg/x'
+import { useFarcasterUser } from '../../../hooks/use-farcaster-user'
+import { Badge } from '../../badge'
 
 export function PostRelationships({ post }: { post: Cast }) {
   const farcaster = post.relationships?.find((c) => c.target === 'farcaster')
@@ -46,36 +47,5 @@ function TwitterBadge({ twitter }: { twitter: Relationship }) {
     >
       {twitter.targetAccount}
     </Badge>
-  )
-}
-
-function Badge({
-  children,
-  icon,
-  onPress,
-}: {
-  children: React.ReactNode
-  icon: React.ReactNode
-  onPress: () => void
-}) {
-  return (
-    <View
-      theme="surface3"
-      bg="$background"
-      bc="$borderColor"
-      bw="$0.25"
-      br="$12"
-      px="$2"
-      py="$1.5"
-      fd="row"
-      ai="center"
-      gap="$1.5"
-      onPress={onPress}
-      cursor="pointer"
-      hoverStyle={{ bg: '$color5' }}
-    >
-      {icon}
-      <Text fos="$1">{children}</Text>
-    </View>
   )
 }

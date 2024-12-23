@@ -1,11 +1,12 @@
-import { Cast } from '../../types'
-import { formatAmount, timeAgo } from '../../utils'
+import { Cast } from '../../../types'
+import { formatAmount, timeAgo } from '../../../utils'
 import { Text, View, XStack, YStack } from '@anonworld/ui'
 import { Heart, MessageSquare } from '@tamagui/lucide-icons'
-import { CredentialBadge } from './credentials'
+import { CredentialBadge } from '../../credentials/badge'
 import { PostActions } from './actions'
 import { PostRelationships } from './relationships'
 import { PostEmbed } from './embeds'
+import { Badge } from '../../badge'
 
 export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
   let text = post.text
@@ -30,10 +31,8 @@ export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
         bw: '$0.5',
       }}
       onPress={onPress}
-      hoverStyle={{
-        bg: '$color3',
-      }}
-      cursor="pointer"
+      hoverStyle={onPress ? { bg: '$color3' } : {}}
+      cursor={onPress ? 'pointer' : undefined}
       f={1}
     >
       <XStack gap="$2" ai="center">
@@ -46,22 +45,14 @@ export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
         <PostEmbed key={embed.url} embed={embed} />
       ))}
       <XStack jc="space-between" ai="center">
-        <XStack ai="center" gap="$4">
-          <Text fos="$2" fow="400" col="$color11">
-            {timeAgo(post.timestamp)}
-          </Text>
-          <XStack ai="center" gap="$2">
-            <Heart size={16} col="$color11" />
-            <Text fos="$2" fow="400" col="$color11">
-              {formatAmount(post.aggregate?.likes ?? post.reactions.likes_count)}
-            </Text>
-          </XStack>
-          <XStack ai="center" gap="$2">
-            <MessageSquare size={16} col="$color11" />
-            <Text fos="$2" fow="400" col="$color11">
-              {formatAmount(post.aggregate?.replies ?? post.replies.count)}
-            </Text>
-          </XStack>
+        <XStack ai="center" gap="$2">
+          <Badge>{timeAgo(post.timestamp)}</Badge>
+          <Badge icon={<Heart size={12} />}>
+            {formatAmount(post.aggregate?.likes ?? post.reactions.likes_count)}
+          </Badge>
+          <Badge icon={<MessageSquare size={12} />}>
+            {formatAmount(post.aggregate?.replies ?? post.replies.count)}
+          </Badge>
         </XStack>
         <PostRelationships post={post} />
       </XStack>

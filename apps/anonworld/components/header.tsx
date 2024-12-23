@@ -57,7 +57,9 @@ export function Header() {
               }
               hoverStyle={{ bg: '$color5' }}
             >
-              <Text fow="500">Posts</Text>
+              <Text fow="600" fos="$2">
+                Posts
+              </Text>
             </View>
           </Link>
           <Link href="/accounts" style={{ textDecoration: 'none' }}>
@@ -69,7 +71,9 @@ export function Header() {
               themeInverse={pathname === Pathname.ACCOUNTS}
               hoverStyle={{ bg: '$color5' }}
             >
-              <Text fow="500">Accounts</Text>
+              <Text fow="600" fos="$2">
+                Accounts
+              </Text>
             </View>
           </Link>
         </View>

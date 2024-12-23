@@ -4,6 +4,7 @@ import { SDKProvider } from './sdk'
 import { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from 'wagmi'
+export { useSDK } from './sdk'
 
 const queryClient = new QueryClient()
 

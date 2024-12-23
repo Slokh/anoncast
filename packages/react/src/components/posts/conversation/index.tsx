@@ -1,9 +1,9 @@
 import { ConversationCast } from '@anonworld/react'
 import { Avatar, Text, View, XStack, YStack } from '@anonworld/ui'
 import { MessageCircle, MessageSquare } from '@tamagui/lucide-icons'
-import { formatAmount } from '../../utils'
-import { PostEmbed } from '../post/embeds'
-import { timeAgo } from '../../utils'
+import { formatAmount } from '../../../utils'
+import { PostEmbed } from '../display/embeds'
+import { timeAgo } from '../../../utils'
 import { Heart } from '@tamagui/lucide-icons'
 import { PostActions } from './actions'
 

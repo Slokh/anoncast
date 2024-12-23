@@ -165,4 +165,8 @@ export class Api {
       body: JSON.stringify({ proof, publicInputs }),
     })
   }
+
+  async getCredential(id: string) {
+    return await this.request<Credential>(`/credentials/${id}`)
+  }
 }

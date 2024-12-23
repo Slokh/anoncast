@@ -84,18 +84,18 @@ export function useCredentials(sdk: AnonWorldSDK) {
     return credential.data
   }
 
-  const remove = (id: string) => {
+  const deleteCredential = (id: string) => {
     setCredentials((prev) => prev.filter((cred) => cred.id !== id))
   }
 
-  const get = (id: string) => {
+  const getCredential = (id: string) => {
     return credentials.find((cred) => cred.id === id)
   }
 
   return {
     credentials,
-    remove,
-    get,
+    delete: deleteCredential,
+    get: getCredential,
     addERC20Balance,
   }
 }
