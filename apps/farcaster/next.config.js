@@ -1,37 +1,14 @@
-import webpack from 'webpack'
-import CopyPlugin from 'copy-webpack-plugin'
-import { withTamagui } from '@tamagui/next-plugin'
-import { join } from 'node:path'
-
-const boolVals = {
-  true: true,
-  false: false,
-}
-
-const disableExtraction =
-  boolVals[process.env.DISABLE_EXTRACTION] ?? process.env.NODE_ENV === 'development'
+const CopyPlugin = require('copy-webpack-plugin')
+const { withTamagui } = require('@tamagui/next-plugin')
+const webpack = require('webpack')
 
 const plugins = [
   withTamagui({
     config: '../../packages/ui/src/config/tamagui.config.ts',
     components: ['tamagui', '@anonworld/ui'],
     appDir: true,
-    importsWhitelist: ['constants.js', 'colors.js'],
     outputCSS: process.env.NODE_ENV === 'production' ? './public/tamagui.css' : null,
-    logTimings: true,
-    disableExtraction,
-    shouldExtract: (path) => {
-      if (path.includes(join('packages', 'app'))) {
-        return true
-      }
-    },
-    excludeReactNativeWebExports: [
-      'Switch',
-      'ProgressBar',
-      'Picker',
-      'CheckBox',
-      'Touchable',
-    ],
+    disableExtraction: process.env.NODE_ENV === 'development',
   }),
 ]
 
@@ -105,4 +82,4 @@ for (const plugin of plugins) {
   }
 }
 
-export default nextConfig
+module.exports = nextConfig

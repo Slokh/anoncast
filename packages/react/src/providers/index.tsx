@@ -1,4 +1,3 @@
-import { useColorScheme } from 'react-native'
 import { TamaguiProvider, type TamaguiProviderProps, config } from '@anonworld/ui'
 import { SDKProvider } from './sdk'
 import { QueryClient } from '@tanstack/react-query'
@@ -13,17 +12,11 @@ export function Provider({
   wagmiConfig,
   ...rest
 }: Omit<TamaguiProviderProps, 'config'> & { wagmiConfig: any }) {
-  const colorScheme = useColorScheme()
-
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <SDKProvider apiUrl={process.env.NEXT_PUBLIC_API_URL}>
-          <TamaguiProvider
-            config={config}
-            defaultTheme={colorScheme === 'dark' ? 'dark' : 'light'}
-            {...rest}
-          >
+          <TamaguiProvider config={config} defaultTheme="dark" disableRootThemeClass>
             {children}
           </TamaguiProvider>
         </SDKProvider>
