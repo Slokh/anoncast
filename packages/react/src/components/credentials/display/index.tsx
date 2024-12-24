@@ -1,16 +1,13 @@
 import { Credential } from '../../../types'
-import { Text, View, XStack, YStack } from '@anonworld/ui'
-import { chains, timeAgo, toHslColors } from '../../../utils'
-import { formatHexId } from '../../../utils'
+import { Image, Text, View, XStack, YStack } from '@anonworld/ui'
+import { chains, timeAgo } from '../../../utils'
 import { Badge } from '../../badge'
 import { CredentialActions } from './actions'
-import { useERC20 } from '../../../hooks'
-import { extractChain } from 'viem/utils'
+import { useToken } from '../../../hooks'
+import { extractChain, formatUnits } from 'viem/utils'
+import { CredentialId } from './id'
 
 export function CredentialDisplay({ credential }: { credential: Credential }) {
-  const id = formatHexId(credential.id)
-  const { background, color } = toHslColors(id)
-
   return (
     <YStack
       theme="surface1"
@@ -26,21 +23,7 @@ export function CredentialDisplay({ credential }: { credential: Credential }) {
       f={1}
     >
       <XStack ai="center" gap="$2">
-        <View
-          theme="surface3"
-          bg={background}
-          br="$12"
-          px="$2"
-          py="$1.5"
-          fd="row"
-          ai="center"
-          gap="$1.5"
-          alignSelf="flex-start"
-        >
-          <Text fos="$1" color={color} fow="500">
-            {id}
-          </Text>
-        </View>
+        <CredentialId credential={credential} />
         <Badge>ERC20 Balance</Badge>
         <Badge>{timeAgo(credential.verified_at)}</Badge>
       </XStack>
@@ -53,25 +36,33 @@ export function CredentialDisplay({ credential }: { credential: Credential }) {
 }
 
 function ERC20CredentialDisplay({ credential }: { credential: Credential }) {
-  const { symbol, amount } = useERC20({
+  const { data } = useToken({
     chainId: Number(credential.metadata.chainId),
     address: credential.metadata.tokenAddress,
-    amount: BigInt(credential.metadata.balance),
   })
 
+  const symbol = data?.attributes.symbol
+  const implementation = data?.attributes.implementations[0]
+  const amount = Number.parseFloat(
+    formatUnits(BigInt(credential.metadata.balance), implementation?.decimals ?? 18)
+  )
+
   return (
-    <XStack gap="$6">
+    <XStack>
       {[
+        { label: 'Token', value: symbol, image: data?.attributes.icon.url },
+        { label: 'Balance', value: amount.toLocaleString() },
         {
           label: 'Chain',
           value: extractChain({ chains, id: Number(credential.metadata.chainId) as any })
             .name,
         },
-        { label: 'Token', value: symbol },
-        { label: 'Balance', value: amount.toLocaleString() },
-      ].map(({ label, value }) => (
-        <YStack key={label}>
-          <Text fow="600">{value}</Text>
+      ].map(({ label, value, image }) => (
+        <YStack key={label} gap="$1" minWidth="$14">
+          <XStack ai="center" gap="$2">
+            {image && <Image src={image} w={16} h={16} />}
+            <Text fow="600">{value}</Text>
+          </XStack>
           <Text fos="$1" fow="400" color="$color11" textTransform="uppercase">
             {label}
           </Text>

@@ -65,35 +65,6 @@ class ZerionService {
     throw new Error('Maximum retries reached while waiting for data')
   }
 
-  async getChains(): Promise<Chain[]> {
-    try {
-      const response = await this.makeRequest<Chain[]>('/chains')
-      return response.data
-    } catch (error) {
-      throw new Error(
-        `Failed to fetch chains: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      )
-    }
-  }
-
-  async getWalletPortfolio(address: string): Promise<Portfolio> {
-    try {
-      const response = await this.makeRequest<Portfolio>(
-        `/wallets/${address}/portfolio`,
-        { maxRetries: 12 }
-      )
-      return response.data
-    } catch (error) {
-      throw new Error(
-        `Failed to fetch wallet portfolio: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      )
-    }
-  }
-
   async getFungiblePositions(address: string): Promise<FungiblePosition[]> {
     const response = await this.makeRequest<FungiblePosition[]>(
       `/wallets/${address}/positions?filter[chain_ids]=${SUPPORTED_CHAIN_IDS.join(',')}`
@@ -101,14 +72,11 @@ class ZerionService {
     return response.data
   }
 
-  async getFungible(id: string): Promise<Fungible> {
-    const response = await this.makeRequest<Fungible>(`/fungibles/${id}`)
-    return response.data
-  }
-
-  async getFungibleChart(id: string, period: ChartPeriod): Promise<Chart> {
-    const response = await this.makeRequest<Chart>(`/fungibles/${id}/charts/${period}`)
-    return response.data
+  async getFungible(chainId: number, tokenAddress: string): Promise<Fungible> {
+    const response = await this.makeRequest<Fungible[]>(
+      `/fungibles?filter[implementation_chain_id]=${chainId}&filter[implementation_address]=${tokenAddress}`
+    )
+    return response.data[0]
   }
 }
 

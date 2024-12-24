@@ -65,7 +65,6 @@ export const useExecuteActions = ({
             credentialToUse = await credentials.addERC20Balance({
               chainId: Number(chainId),
               tokenAddress: tokenAddress as `0x${string}`,
-              balanceSlot: 0,
               verifiedBalance: requiredBalance,
             })
           }

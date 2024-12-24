@@ -33,30 +33,17 @@ export function NewCredentialForm() {
 
 function ERC20CredentialForm() {
   const { address } = useAccount()
-  const [token, setToken] = useState<FungiblePosition>()
-  const [balance, setBalance] = useState<number>(0)
-
-  const handleSetToken = (token?: FungiblePosition) => {
-    setToken(token)
-    if (token) {
-      setBalance(Math.floor(token.attributes.quantity.float / 2))
-    }
-  }
 
   return (
     <YStack gap="$2">
       <WalletField />
       {address && (
         <>
-          <TokenField address={address} token={token} setToken={handleSetToken} />
-          <BalanceField
-            maxBalance={Number(token?.attributes.quantity.float.toFixed(2) ?? 0)}
-            balance={balance}
-            setBalance={setBalance}
-          />
+          <TokenField address={address} />
+          <BalanceField />
         </>
       )}
-      <AddCredentialButton address={address} token={token} balance={balance} />
+      <AddCredentialButton />
     </YStack>
   )
 }
@@ -112,14 +99,18 @@ function WalletField() {
 
 function TokenField({
   address,
-  token,
-  setToken,
 }: {
   address: string
-  token?: FungiblePosition
-  setToken: (token?: FungiblePosition) => void
 }) {
   const { data } = useWalletFungibles(address)
+  const { token, setToken, setBalance } = useNewCredential()
+
+  const handleSetToken = (token?: FungiblePosition) => {
+    setToken(token)
+    if (token) {
+      setBalance(Math.floor(token.attributes.quantity.float / 2))
+    }
+  }
 
   const filteredData = useMemo(() => {
     return (
@@ -133,7 +124,7 @@ function TokenField({
 
   useEffect(() => {
     if (filteredData.length > 0) {
-      setToken(filteredData[0])
+      handleSetToken(filteredData[0])
     }
   }, [filteredData])
 
@@ -152,7 +143,7 @@ function TokenField({
         value={selectedToken.id}
         onValueChange={(value) => {
           const token = data?.find((t) => t.id === value)
-          setToken(token)
+          handleSetToken(token)
         }}
         disablePreventBodyScroll
       >
@@ -208,8 +199,8 @@ function TokenValue({ token }: { token: FungiblePosition }) {
   )
   return (
     <XStack ai="center" jc="space-between" w="100%">
-      <XStack gap="$2" ai="center">
-        <Image src={token.attributes.fungible_info.icon?.url} width={24} height={24} />
+      <XStack gap="$3" ai="center">
+        <Image src={token.attributes.fungible_info.icon?.url} width={28} height={28} />
         <YStack>
           <Text fos="$2" fow="500">
             {token.attributes.fungible_info.name}
@@ -239,15 +230,9 @@ function TokenValue({ token }: { token: FungiblePosition }) {
   )
 }
 
-function BalanceField({
-  maxBalance,
-  balance,
-  setBalance,
-}: {
-  maxBalance: number
-  balance: number
-  setBalance: (balance: number) => void
-}) {
+function BalanceField() {
+  const { balance, setBalance, token } = useNewCredential()
+  const maxBalance = Number(token?.attributes.quantity.float.toFixed(2) ?? 0)
   return (
     <YStack>
       <Label fos="$1" fow="400" color="$color11" textTransform="uppercase">
@@ -292,12 +277,9 @@ function BalanceField({
   )
 }
 
-function AddCredentialButton({
-  address,
-  token,
-  balance,
-}: { address?: string; token?: FungiblePosition; balance: number }) {
-  const { setIsOpen } = useNewCredential()
+function AddCredentialButton() {
+  const { address } = useAccount()
+  const { token, balance, setIsOpen } = useNewCredential()
   const { credentials } = useSDK()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
@@ -312,7 +294,6 @@ function AddCredentialButton({
       await credentials.addERC20Balance({
         chainId: chainId,
         tokenAddress: impl.address as `0x${string}`,
-        balanceSlot: 0,
         verifiedBalance: parseUnits(balance.toString(), impl.decimals),
       })
       setIsLoading(false)

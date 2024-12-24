@@ -10,6 +10,7 @@ import {
   UploadImageResponse,
   ConversationCast,
   FungiblePosition,
+  Fungible,
 } from './types'
 
 export class Api {
@@ -174,6 +175,16 @@ export class Api {
   async getWalletFungibles(address: string) {
     return await this.request<{ data: FungiblePosition[] }>(
       `/wallet/${address}/fungibles`
+    )
+  }
+
+  async getFungible(chainId: number, tokenAddress: string) {
+    return await this.request<Fungible>(`/tokens/${chainId}/${tokenAddress}`)
+  }
+
+  async getBalanceStorageSlot(chainId: number, tokenAddress: string) {
+    return await this.request<{ slot: number }>(
+      `/tokens/${chainId}/${tokenAddress}/balance-slot`
     )
   }
 }

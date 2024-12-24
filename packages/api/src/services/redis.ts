@@ -42,6 +42,22 @@ export class RedisService {
   async markActionOccurred(actionId: string, hash: string) {
     await this.client.set(`action:${actionId}:${hash}`, 'true', 'EX', 60 * 5)
   }
+
+  async getBalanceStorageSlot(chainId: number, address: string) {
+    return this.client.get(`balance-slot:${chainId}:${address}`)
+  }
+
+  async setBalanceStorageSlot(chainId: number, address: string, slot: number) {
+    return this.client.set(`balance-slot:${chainId}:${address}`, slot)
+  }
+
+  async getToken(chainId: number, tokenAddress: string) {
+    return this.client.get(`token:${chainId}:${tokenAddress}`)
+  }
+
+  async setToken(chainId: number, tokenAddress: string, token: string) {
+    return this.client.set(`token:${chainId}:${tokenAddress}`, token, 'EX', 60 * 60 * 24)
+  }
 }
 
 export const redis = RedisService.getInstance()

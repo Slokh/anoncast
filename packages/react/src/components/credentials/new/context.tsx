@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { CredentialType } from '../../../types'
+import { CredentialType, FungiblePosition } from '../../../types'
 
 interface NewCredentialContextValue {
   isOpen: boolean
@@ -8,6 +8,10 @@ interface NewCredentialContextValue {
   setCredentialType: (credentialType: CredentialType) => void
   connectWallet?: () => void
   isConnecting: boolean
+  token: FungiblePosition | undefined
+  setToken: (token?: FungiblePosition) => void
+  balance: number
+  setBalance: (balance: number) => void
 }
 
 const NewCredentialContext = createContext<NewCredentialContextValue | null>(null)
@@ -26,6 +30,9 @@ export function NewCredentialProvider({
     CredentialType.ERC20_BALANCE
   )
   const [isConnectingWallet, setIsConnectingWallet] = useState(false)
+
+  const [token, setToken] = useState<FungiblePosition>()
+  const [balance, setBalance] = useState<number>(0)
 
   const handleConnectWallet = () => {
     if (!connectWallet) return
@@ -50,6 +57,10 @@ export function NewCredentialProvider({
         credentialType,
         setCredentialType,
         isConnecting,
+        token,
+        setToken,
+        balance,
+        setBalance,
       }}
     >
       {children}

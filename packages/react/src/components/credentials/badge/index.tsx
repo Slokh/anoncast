@@ -2,7 +2,8 @@ import { Credential } from '../../../types'
 import { formatAmount } from '../../../utils'
 import { Coins } from '@tamagui/lucide-icons'
 import { Badge } from '../../badge'
-import { useERC20 } from '../../../hooks'
+import { useToken } from '../../../hooks'
+import { formatUnits } from 'viem/utils'
 
 export function CredentialBadge({ credential }: { credential: Credential }) {
   if (!credential.metadata?.balance) return null
@@ -11,11 +12,16 @@ export function CredentialBadge({ credential }: { credential: Credential }) {
 }
 
 function ERC20CredentialBadge({ credential }: { credential: Credential }) {
-  const { symbol, amount } = useERC20({
+  const { data } = useToken({
     chainId: Number(credential.metadata.chainId),
     address: credential.metadata.tokenAddress,
-    amount: BigInt(credential.metadata.balance),
   })
+
+  const symbol = data?.attributes.symbol
+  const implementation = data?.attributes.implementations[0]
+  const amount = Number.parseFloat(
+    formatUnits(BigInt(credential.metadata.balance), implementation?.decimals ?? 18)
+  )
 
   return <Badge icon={<Coins size={12} />}>{`${formatAmount(amount)} ${symbol}`}</Badge>
 }
