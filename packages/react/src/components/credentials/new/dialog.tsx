@@ -19,13 +19,13 @@ export function NewCredentialDialog() {
         </Button>
       </Dialog.Trigger>
 
-      <Adapt when="sm" platform="touch">
-        <Sheet animation="medium" zIndex={200000} modal dismissOnSnapToBottom>
-          <Sheet.Frame padding="$4" gap="$4">
+      <Adapt when="sm">
+        <Sheet animation="quicker" zIndex={200000} modal dismissOnSnapToBottom>
+          <Sheet.Frame padding="$4" gap="$2">
             <Adapt.Contents />
           </Sheet.Frame>
           <Sheet.Overlay
-            animation="lazy"
+            animation="quicker"
             enterStyle={{ opacity: 0 }}
             exitStyle={{ opacity: 0 }}
           />
@@ -35,8 +35,7 @@ export function NewCredentialDialog() {
       <Dialog.Portal>
         <Dialog.Overlay
           key="overlay"
-          animation="slow"
-          opacity={0.5}
+          animation="quicker"
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
         />

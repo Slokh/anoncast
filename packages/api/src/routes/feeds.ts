@@ -126,6 +126,7 @@ export async function formatPosts(posts: Array<Post>) {
         : undefined,
       credentials: postCredentials.map((c) => ({
         ...c.credential_instances,
+        id: undefined,
         proof: undefined,
       })),
       relationships: postRelationships.map((r) => ({

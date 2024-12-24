@@ -24,13 +24,13 @@ export function PostComposer() {
         </Button>
       </Dialog.Trigger>
 
-      <Adapt when="sm" platform="touch">
-        <Sheet animation="medium" zIndex={200000} modal dismissOnSnapToBottom>
-          <Sheet.Frame padding="$4" gap="$4">
+      <Adapt when="sm">
+        <Sheet animation="quicker" zIndex={200000} modal dismissOnSnapToBottom>
+          <Sheet.Frame padding="$4" gap="$2">
             <Adapt.Contents />
           </Sheet.Frame>
           <Sheet.Overlay
-            animation="lazy"
+            animation="quicker"
             enterStyle={{ opacity: 0 }}
             exitStyle={{ opacity: 0 }}
           />
@@ -40,8 +40,7 @@ export function PostComposer() {
       <Dialog.Portal>
         <Dialog.Overlay
           key="overlay"
-          animation="slow"
-          opacity={0.5}
+          animation="quicker"
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
         />
@@ -61,7 +60,7 @@ export function PostComposer() {
           ]}
           enterStyle={{ x: 0, y: -20, opacity: 0, scale: 0.9 }}
           exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
-          gap="$4"
+          gap="$2"
         >
           <XStack gap="$2">
             <WalletMinimal />

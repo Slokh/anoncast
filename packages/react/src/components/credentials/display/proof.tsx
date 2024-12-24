@@ -1,4 +1,4 @@
-import { Dialog, Text, TextArea, View, XStack } from '@anonworld/ui'
+import { Dialog, TextArea, View, XStack } from '@anonworld/ui'
 import { useCredential } from '../../../hooks/use-credential'
 import { Credential } from '../../../types'
 import { X } from '@tamagui/lucide-icons'
@@ -18,12 +18,10 @@ export function CredentialProof({
       <Dialog.Portal>
         <Dialog.Overlay
           key="overlay"
-          animation="slow"
-          opacity={0.5}
+          animation="quicker"
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
         />
-
         <Dialog.Content
           bordered
           elevate
@@ -39,7 +37,7 @@ export function CredentialProof({
           ]}
           enterStyle={{ x: 0, y: -20, opacity: 0, scale: 0.9 }}
           exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
-          gap="$4"
+          gap="$2"
           w={600}
         >
           <XStack ai="center" jc="space-between">

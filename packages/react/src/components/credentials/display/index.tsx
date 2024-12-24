@@ -11,6 +11,7 @@ export function CredentialDisplay({ credential }: { credential: Credential }) {
   return (
     <YStack
       theme="surface1"
+      themeShallow
       bg="$background"
       bc="$borderColor"
       bbw="$0.5"

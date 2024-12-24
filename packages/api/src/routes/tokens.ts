@@ -60,8 +60,7 @@ export const tokenRoutes = createElysia({ prefix: '/tokens' })
           address: tokenAddress as `0x${string}`,
           slot: storageKey,
         })
-        if (!data) continue
-        if (hexToBigInt(data) === topHolder.balance) {
+        if (data && hexToBigInt(data) === topHolder.balance) {
           await redis.setBalanceStorageSlot(chainId, tokenAddress, slot)
           return { slot }
         }

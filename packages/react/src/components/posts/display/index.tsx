@@ -7,6 +7,7 @@ import { PostActions } from './actions'
 import { PostRelationships } from './relationships'
 import { PostEmbed } from './embeds'
 import { Badge } from '../../badge'
+import { CredentialId } from '../../credentials/display/id'
 
 export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
   let text = post.text
@@ -21,6 +22,7 @@ export function Post({ post, onPress }: { post: Cast; onPress?: () => void }) {
   return (
     <YStack
       theme="surface1"
+      themeShallow
       bg="$background"
       bc="$borderColor"
       bbw="$0.5"
