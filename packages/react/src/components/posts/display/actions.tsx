@@ -1,5 +1,5 @@
 import { MoreHorizontal, Trash } from '@tamagui/lucide-icons'
-import { Button, Popover, Text, View, YGroup } from '@anonworld/ui'
+import { Popover, Text, View, YGroup } from '@anonworld/ui'
 import { useActions } from '../../../hooks/use-actions'
 import { Action, ActionType, Cast } from '../../../types'
 import { useSDK } from '../../../providers/sdk'

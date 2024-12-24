@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
-import { NextTamaguiProvider } from './NextTamaguiProvider'
 import { Header } from '@/components/header'
 import { GeistSans } from 'geist/font/sans'
+import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
   title: 'anon.world',
@@ -13,10 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={GeistSans.className}>
-        <NextTamaguiProvider>
+        <Providers>
           <Header />
           {children}
-        </NextTamaguiProvider>
+        </Providers>
       </body>
     </html>
   )

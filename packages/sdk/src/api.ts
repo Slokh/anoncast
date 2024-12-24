@@ -9,6 +9,7 @@ import {
   RequestConfig,
   UploadImageResponse,
   ConversationCast,
+  FungiblePosition,
 } from './types'
 
 export class Api {
@@ -168,5 +169,11 @@ export class Api {
 
   async getCredential(id: string) {
     return await this.request<Credential>(`/credentials/${id}`)
+  }
+
+  async getWalletFungibles(address: string) {
+    return await this.request<{ data: FungiblePosition[] }>(
+      `/wallet/${address}/fungibles`
+    )
   }
 }

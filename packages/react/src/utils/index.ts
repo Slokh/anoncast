@@ -1,8 +1,11 @@
 import { base } from 'viem/chains'
-import { Action, Cast, Credential } from '../types'
-import { extractChain } from 'viem/utils'
+import { Action, Credential } from '../types'
 
 export const chains = [base]
+
+export const zerionToChainId: Record<string, number> = {
+  base: 8453,
+}
 
 export function timeAgo(timestamp: string): string {
   const now = new Date()

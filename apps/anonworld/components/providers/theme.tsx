@@ -8,13 +8,10 @@ import '@tamagui/polyfill-dev'
 import type { ReactNode } from 'react'
 import { StyleSheet } from 'react-native'
 import { useServerInsertedHTML } from 'next/navigation'
-import { NextThemeProvider, useRootTheme } from '@tamagui/next-theme'
+import { NextThemeProvider } from '@tamagui/next-theme'
 import { config } from '@anonworld/ui'
-import { Providers } from '@/components/providers'
 
-export const NextTamaguiProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useRootTheme()
-
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   useServerInsertedHTML(() => {
     // @ts-ignore
     const rnwStyle = StyleSheet.getSheet()
@@ -60,14 +57,8 @@ export const NextTamaguiProvider = ({ children }: { children: ReactNode }) => {
   })
 
   return (
-    <NextThemeProvider
-      skipNextHead
-      defaultTheme="dark"
-      onChangeTheme={(next) => {
-        setTheme(next as any)
-      }}
-    >
-      <Providers theme={theme}> {children}</Providers>
+    <NextThemeProvider skipNextHead defaultTheme="dark">
+      {children}
     </NextThemeProvider>
   )
 }

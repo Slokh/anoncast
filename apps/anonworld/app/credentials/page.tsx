@@ -1,10 +1,12 @@
 'use client'
 
-import { CredentialComposer, CredentialDisplay, useSDK } from '@anonworld/react'
+import { CredentialDisplay, NewCredential, useSDK } from '@anonworld/react'
 import { Text, View, XStack, YStack } from '@anonworld/ui'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 
 export default function Credentials() {
   const { credentials } = useSDK()
+  const { connectModalOpen, openConnectModal } = useConnectModal()
 
   const sortedCredentials = credentials.credentials.sort((a, b) => {
     return new Date(b.verified_at).getTime() - new Date(a.verified_at).getTime()
@@ -16,7 +18,7 @@ export default function Credentials() {
         <Text fos="$2" fow="400" color="$color11">
           {`${sortedCredentials.length} Credentials`}
         </Text>
-        <CredentialComposer />
+        <NewCredential isConnecting={connectModalOpen} connectWallet={openConnectModal} />
       </XStack>
       <YStack gap="$4">
         {sortedCredentials.map((credential) => (

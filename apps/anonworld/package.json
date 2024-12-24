@@ -11,8 +11,9 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@anonworld/ui": "*",
     "@anonworld/react": "*",
+    "@anonworld/ui": "*",
+    "@rainbow-me/rainbowkit": "^2.2.1",
     "@tamagui/config": "^1.120.0",
     "@tamagui/lucide-icons": "^1.116.12",
     "@tamagui/next-theme": "^1.120.0",

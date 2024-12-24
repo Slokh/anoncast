@@ -1,18 +1,13 @@
-import { Image, Link, Plus, Reply, WalletMinimal, X } from '@tamagui/lucide-icons'
-import {
-  Adapt,
-  Button,
-  Checkbox,
-  Dialog,
-  Sheet,
-  Text,
-  TextArea,
-  XStack,
-} from '@anonworld/ui'
+import { Plus } from '@tamagui/lucide-icons'
+import { Adapt, Button, Dialog, Label, Sheet, Text, XStack, YStack } from '@anonworld/ui'
+import { CredentialTypeSelect } from './select'
+import { NewCredentialForm } from './form'
+import { useNewCredential } from './context'
 
-export function CredentialComposer() {
+export function NewCredentialDialog() {
+  const { isOpen, setIsOpen } = useNewCredential()
   return (
-    <Dialog modal>
+    <Dialog modal open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger asChild>
         <Button size="$3" themeInverse bg="$background" br="$12">
           <XStack ai="center" gap="$2">
@@ -61,29 +56,17 @@ export function CredentialComposer() {
           ]}
           enterStyle={{ x: 0, y: -20, opacity: 0, scale: 0.9 }}
           exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
-          gap="$4"
+          gap="$2"
+          w={600}
         >
-          <XStack gap="$2">
-            <WalletMinimal />
-            <Text>5.0K ANON</Text>
-          </XStack>
-          <TextArea />
-          <XStack>
-            <Checkbox />
-            <Text>Reveal my post</Text>
-          </XStack>
-          <XStack>
-            <XStack>
-              <Image />
-              <Link />
-              <Reply />
-            </XStack>
-            <Button size="$3" themeInverse bg="$background" br="$12">
-              <Text fos="$2" fow="600">
-                Post
-              </Text>
-            </Button>
-          </XStack>
+          <Dialog.Title>Add Credential</Dialog.Title>
+          <YStack>
+            <Label fos="$1" fow="400" color="$color11" textTransform="uppercase">
+              Credential Type
+            </Label>
+            <CredentialTypeSelect />
+          </YStack>
+          <NewCredentialForm />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

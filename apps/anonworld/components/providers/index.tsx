@@ -1,9 +1,13 @@
+'use client'
+
 import { CustomToast, ToastProvider, isWeb } from '@anonworld/ui'
 import { ToastViewport } from './ToastViewport'
 import { Provider } from '../../../../packages/react/src'
 import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { base } from 'wagmi/chains'
 import { ReactNode } from 'react'
+import { ThemeProvider } from './theme'
+import '@rainbow-me/rainbowkit/styles.css'
 
 const config = getDefaultConfig({
   appName: 'anoncast',
@@ -12,20 +16,22 @@ const config = getDefaultConfig({
   ssr: true,
 })
 
-export function Providers({ children, theme }: { children: ReactNode; theme: string }) {
+export function Providers({ children }: { children: ReactNode }) {
   return (
-    <Provider wagmiConfig={config}>
-      <RainbowKitProvider>
-        <ToastProvider
-          swipeDirection="horizontal"
-          duration={6000}
-          native={isWeb ? [] : ['mobile']}
-        >
-          {children}
-          <CustomToast />
-          <ToastViewport />
-        </ToastProvider>
-      </RainbowKitProvider>
-    </Provider>
+    <ThemeProvider>
+      <Provider wagmiConfig={config}>
+        <RainbowKitProvider>
+          <ToastProvider
+            swipeDirection="horizontal"
+            duration={6000}
+            native={isWeb ? [] : ['mobile']}
+          >
+            {children}
+            <CustomToast />
+            <ToastViewport />
+          </ToastProvider>
+        </RainbowKitProvider>
+      </Provider>
+    </ThemeProvider>
   )
 }
