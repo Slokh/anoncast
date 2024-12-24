@@ -64,6 +64,26 @@ class SimplehashService {
     throw new Error('Maximum retries reached while waiting for data')
   }
 
+  async getTopHolder(chainId: number, tokenAddress: string) {
+    const chain = CHAIN_ID_TO_SIMPLEHASH_CHAIN_ID[chainId]
+    if (!chain) {
+      throw new Error(`Unsupported chainId: ${chainId}`)
+    }
+
+    const url = `/fungibles/top_wallets?fungible_id=${chain}.${tokenAddress}&limit=1`
+    const response = await this.makeRequest<{
+      owners: { owner_address: `0x${string}`; quantity_string: string }[]
+      next_cursor: string
+    }>(url)
+
+    const owner = response.owners[0]
+
+    return {
+      address: owner.owner_address,
+      balance: BigInt(owner.quantity_string),
+    }
+  }
+
   async getTopWalletsForFungible(chainId: number, tokenAddress: string, cursor?: string) {
     const chain = CHAIN_ID_TO_SIMPLEHASH_CHAIN_ID[chainId]
     if (!chain) {
@@ -75,32 +95,6 @@ class SimplehashService {
       owners: { owner_address: `0x${string}`; quantity_string: string }[]
       next_cursor: string
     }>(url)
-  }
-
-  async getTokenOwners({
-    chainId,
-    tokenAddress,
-    minBalance,
-  }: { chainId: number; tokenAddress: string; minBalance: bigint }) {
-    const owners: `0x${string}`[] = []
-
-    let cursor = ''
-    while (true) {
-      const data = await this.getTopWalletsForFungible(chainId, tokenAddress, cursor)
-
-      for (const owner of data.owners) {
-        if (BigInt(owner.quantity_string) >= minBalance) {
-          owners.push(owner.owner_address.toLowerCase() as `0x${string}`)
-        } else {
-          return owners
-        }
-      }
-
-      if (!data.next_cursor) break
-      cursor = data.next_cursor
-    }
-
-    return owners
   }
 }
 

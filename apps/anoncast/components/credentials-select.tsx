@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Credential, useSDK } from '@anonworld/react'
+import { Credential, useSDK } from '../../../packages/react/src'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -119,7 +119,6 @@ export function VerifyCredential({
       const credential = await credentials.addERC20Balance({
         chainId: 8453,
         tokenAddress: TOKEN_ADDRESS,
-        balanceSlot: 0,
         verifiedBalance: parseEther(balance.toString()),
       })
       onVerify(credential)

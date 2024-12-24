@@ -4,10 +4,13 @@ import {
   Cast,
   Channel,
   Credential,
-  Identity,
+  User,
   PerformAction,
   RequestConfig,
   UploadImageResponse,
+  ConversationCast,
+  FungiblePosition,
+  Fungible,
 } from './types'
 
 export class Api {
@@ -111,12 +114,22 @@ export class Api {
     return await this.request<Cast>(`/posts/${hash}`)
   }
 
+  async getPostConversation(hash: string) {
+    return await this.request<{ data: Array<ConversationCast> }>(
+      `/posts/${hash}/conversation`
+    )
+  }
+
   async getFarcasterCast(identifier: string) {
     return await this.request<Cast>(`/farcaster/casts?identifier=${identifier}`)
   }
 
   async getFarcasterIdentity(address: string) {
-    return await this.request<Identity>(`/farcaster/identities?address=${address}`)
+    return await this.request<User>(`/farcaster/identities?address=${address}`)
+  }
+
+  async getFarcasterUser(fid: number) {
+    return await this.request<User>(`/farcaster/users/${fid}`)
   }
 
   async getFarcasterChannel(channelId: string) {
@@ -138,6 +151,10 @@ export class Api {
     return await this.request<Action>(`/actions/${actionId}`)
   }
 
+  async getActions() {
+    return await this.request<{ data: Action[] }>('/actions')
+  }
+
   async createCredential({
     proof,
     publicInputs,
@@ -149,5 +166,25 @@ export class Api {
       method: 'POST',
       body: JSON.stringify({ proof, publicInputs }),
     })
+  }
+
+  async getCredential(id: string) {
+    return await this.request<Credential>(`/credentials/${id}`)
+  }
+
+  async getWalletFungibles(address: string) {
+    return await this.request<{ data: FungiblePosition[] }>(
+      `/wallet/${address}/fungibles`
+    )
+  }
+
+  async getFungible(chainId: number, tokenAddress: string) {
+    return await this.request<Fungible>(`/tokens/${chainId}/${tokenAddress}`)
+  }
+
+  async getBalanceStorageSlot(chainId: number, tokenAddress: string) {
+    return await this.request<{ slot: number }>(
+      `/tokens/${chainId}/${tokenAddress}/balance-slot`
+    )
   }
 }

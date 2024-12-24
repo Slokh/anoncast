@@ -1,6 +1,6 @@
 import { AnonWorldSDK } from '@anonworld/sdk'
 import { createContext, useContext, ReactNode, useMemo } from 'react'
-import { useCredentials } from './hooks/use-credentials'
+import { useCredentials } from '../hooks/use-credentials'
 
 interface SDKContextValue {
   sdk: AnonWorldSDK

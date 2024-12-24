@@ -6,6 +6,7 @@
     "build": "bun run --filter '**' build",
     "anoncast": "bun run --filter anoncast dev",
     "farcaster": "bun run --filter farcaster dev",
+    "anonworld": "bun run --filter anonworld dev",
     "api:dev": "bun run --filter @anonworld/api dev",
     "api:start": "bun run --filter @anonworld/api start",
     "zk:build": "bun run --filter @anonworld/zk build-circuits",

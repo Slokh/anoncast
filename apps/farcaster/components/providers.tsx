@@ -1,11 +1,10 @@
 'use client'
 
-import { createConfig, http, WagmiProvider } from 'wagmi'
+import { createConfig, http } from 'wagmi'
 import { base } from 'wagmi/chains'
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { frameConnector } from '@/lib/connector'
-import { SDKProvider } from '@anonworld/react'
+import { Provider } from '@anonworld/react'
 
 export const config = createConfig({
   chains: [base],
@@ -16,8 +15,6 @@ export const config = createConfig({
   ssr: true,
 })
 
-const queryClient = new QueryClient()
-
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
@@ -27,11 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       forcedTheme="dark"
       disableTransitionOnChange
     >
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
-          <SDKProvider apiUrl={process.env.NEXT_PUBLIC_API_URL}>{children}</SDKProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <Provider wagmiConfig={config}>{children}</Provider>
     </ThemeProvider>
   )
 }

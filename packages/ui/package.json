@@ -1,0 +1,22 @@
+{
+  "name": "@anonworld/ui",
+  "version": "0.0.1",
+  "sideEffects": ["*.css"],
+  "private": true,
+  "types": "./src",
+  "main": "src/index.tsx",
+  "module:jsx": "src",
+  "files": ["types", "dist"],
+  "scripts": {
+    "build": "tamagui-build --skip-types",
+    "watch": "tamagui-build --skip-types --watch"
+  },
+  "dependencies": {
+    "@tamagui/toast": "^1.120.0",
+    "expo-constants": "^17.0.3",
+    "tamagui": "^1.120.0"
+  },
+  "devDependencies": {
+    "@tamagui/build": "^1.120.0"
+  }
+}

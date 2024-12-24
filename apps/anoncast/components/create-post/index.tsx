@@ -21,7 +21,7 @@ import { Input } from '../ui/input'
 import { useQuery } from '@tanstack/react-query'
 import Confetti from 'confetti-react'
 import { Checkbox } from '../ui/checkbox'
-import { useSDK } from '@anonworld/react'
+import { useSDK } from '../../../../packages/react/src'
 import { CredentialsSelect } from '../credentials-select'
 
 const MAX_EMBEDS = 2

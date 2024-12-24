@@ -1,10 +1,13 @@
 import {
   GetCastResponse,
   CreateCastResponse,
-  GetUserResponse,
   GetBulkUsersResponse,
   GetCastsResponse,
   GetChannelResponse,
+  GetUserByUsernameResponse,
+  GetUsersResponse,
+  GetBulkCastsResponse,
+  GetConversationResponse,
 } from './types'
 import { getSignerForFid } from '@anonworld/db'
 
@@ -71,7 +74,7 @@ class NeynarService {
   }
 
   async getUserByUsername(username: string) {
-    return this.makeRequest<GetUserResponse>(
+    return this.makeRequest<GetUserByUsernameResponse>(
       `/farcaster/user/by_username?username=${username}`
     )
   }
@@ -80,6 +83,10 @@ class NeynarService {
     return this.makeRequest<GetCastResponse>(
       `/farcaster/cast?type=${hash.startsWith('0x') ? 'hash' : 'url'}&identifier=${hash}`
     )
+  }
+
+  async getUser(fid: number) {
+    return this.makeRequest<GetUsersResponse>(`/farcaster/user/bulk?fids=${fid}`)
   }
 
   async getBulkUsers(addresses: string[]) {
@@ -91,6 +98,12 @@ class NeynarService {
   async getUserCasts(fid: number, limit = 150, cursor?: string) {
     return this.makeRequest<GetCastsResponse>(
       `/farcaster/feed/user/casts?limit=${limit}&include_replies=true&fid=${fid}${cursor ? `&cursor=${cursor}` : ''}`
+    )
+  }
+
+  async getBulkCasts(hashes: string[]) {
+    return this.makeRequest<GetBulkCastsResponse>(
+      `/farcaster/casts?casts=${hashes.join(',')}`
     )
   }
 
@@ -186,6 +199,12 @@ class NeynarService {
     return {
       success: true,
     }
+  }
+
+  async getConversation(identifier: string) {
+    return this.makeRequest<GetConversationResponse>(
+      `/farcaster/cast/conversation?identifier=${identifier}&type=hash&reply_depth=5&include_chronological_parent_casts=false&sort_type=desc_chron&limit=50`
+    )
   }
 }
 

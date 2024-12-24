@@ -34,15 +34,20 @@ export function useCredentials(sdk: AnonWorldSDK) {
   const addERC20Balance = async (args: {
     chainId: number
     tokenAddress: `0x${string}`
-    balanceSlot: number
     verifiedBalance: bigint
   }) => {
     if (!address) {
       throw new Error('No address connected')
     }
 
-    const balanceSlot = pad(toHex(args.balanceSlot))
-    const storageKey = keccak256(concat([pad(address), balanceSlot]))
+    const response = await sdk.getBalanceStorageSlot(args.chainId, args.tokenAddress)
+    if (!response.data) {
+      throw new Error('Failed to find balance storage slot')
+    }
+
+    const balanceSlot = response.data.slot
+    const balanceSlotHex = pad(toHex(balanceSlot))
+    const storageKey = keccak256(concat([pad(address), balanceSlotHex]))
     const block = await getBlock(config, { chainId: args.chainId })
     const proof = await getProof(config, {
       address: args.tokenAddress,
@@ -55,7 +60,7 @@ export function useCredentials(sdk: AnonWorldSDK) {
       blockNumber: block.number.toString(),
       storageHash: proof.storageHash,
       tokenAddress: args.tokenAddress,
-      balanceSlot: args.balanceSlot.toString(),
+      balanceSlot: balanceSlot,
       balance: args.verifiedBalance.toString(),
     })
     const messageHash = hashMessage(message)
@@ -70,7 +75,7 @@ export function useCredentials(sdk: AnonWorldSDK) {
       chainId: args.chainId,
       blockNumber: block.number,
       tokenAddress: args.tokenAddress,
-      balanceSlot,
+      balanceSlot: balanceSlotHex,
       verifiedBalance: args.verifiedBalance,
       blockTimestamp: block.timestamp,
     })
@@ -84,18 +89,18 @@ export function useCredentials(sdk: AnonWorldSDK) {
     return credential.data
   }
 
-  const remove = (id: string) => {
+  const deleteCredential = (id: string) => {
     setCredentials((prev) => prev.filter((cred) => cred.id !== id))
   }
 
-  const get = (id: string) => {
+  const getCredential = (id: string) => {
     return credentials.find((cred) => cred.id === id)
   }
 
   return {
     credentials,
-    remove,
-    get,
+    delete: deleteCredential,
+    get: getCredential,
     addERC20Balance,
   }
 }

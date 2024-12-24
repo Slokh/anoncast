@@ -1,13 +1,13 @@
 'use client'
 
 import { useToast } from '@/lib/hooks/use-toast'
-import { Cast, Channel, Credential } from '@anonworld/react'
+import { Cast, Channel, Credential } from '../../../../packages/react/src'
 import { useRouter } from 'next/navigation'
 import { createContext, useContext, useState, ReactNode } from 'react'
 import { hashMessage } from 'viem'
 import { ToastAction } from '../ui/toast'
 import { CREATE_POST_ACTION_ID } from '@/lib/utils'
-import { ExecuteActionsStatus, useExecuteActions } from '@anonworld/react'
+import { ExecuteActionsStatus, useExecuteActions } from '../../../../packages/react/src'
 
 type Variant = 'anoncast' | 'anonfun' | 'anon'
 

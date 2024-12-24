@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSDK } from '../sdk'
+import { useSDK } from '../providers/sdk'
 import { useAccount } from 'wagmi'
 import { Credential, PerformAction, PerformActionData } from '@anonworld/sdk/types'
 import { parseUnits } from 'viem'
@@ -65,7 +65,6 @@ export const useExecuteActions = ({
             credentialToUse = await credentials.addERC20Balance({
               chainId: Number(chainId),
               tokenAddress: tokenAddress as `0x${string}`,
-              balanceSlot: 0,
               verifiedBalance: requiredBalance,
             })
           }

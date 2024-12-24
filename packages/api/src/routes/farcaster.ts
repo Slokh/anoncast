@@ -28,6 +28,21 @@ export const farcasterRoutes = createElysia({ prefix: '/farcaster' })
     }
   )
   .get(
+    '/users/:fid',
+    async ({ params, error }) => {
+      const response = await neynar.getUser(params.fid)
+      if (response.users.length === 0) {
+        throw error(404, 'User not found')
+      }
+      return response.users[0]
+    },
+    {
+      params: t.Object({
+        fid: t.Number(),
+      }),
+    }
+  )
+  .get(
     '/identities',
     async ({ query }) => {
       try {
