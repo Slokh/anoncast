@@ -27,8 +27,8 @@ function Inner() {
             title="Launch coins anonymously via @clanker"
             description="To launch on anonfun, mention @clanker and tell it what you want to launch: token name and image. The raw suggestions will be posted from @anoncast. Anyone that meets the requirements can then launch it to @anonfun via @clanker."
             requirements={[
-              { amount: 5000, label: 'Suggest to @anoncast' },
-              { amount: 2000000, label: 'Launch to @anonfun' },
+              { amount: 10000000, label: 'Suggest to @Rumour' },
+              { amount: 200000000, label: 'Launch to @anonfun' },
             ]}
           />
         )}

@@ -10,11 +10,11 @@ import { useRouter } from 'next/navigation'
 import { BEST_OF_FID, LAUNCH_FID } from '@/lib/utils'
 
 export function PostFeed({
-  defaultTab = 'trending',
+  defaultTab = '🔥 Hot',
 }: {
-  defaultTab?: 'new' | 'trending'
+  defaultTab?: '👀 Fresh rumours' | '🔥 Hot'
 }) {
-  const [selected, setSelected] = useState<'new' | 'trending'>(defaultTab)
+  const [selected, setSelected] = useState<'🔥 Hot' | '👀 Fresh rumours'>(defaultTab)
   const router = useRouter()
 
   const { data: trendingPosts, isLoading: isTrendingLoading } = useTrendingPosts({
@@ -31,16 +31,16 @@ export function PostFeed({
     <div className="flex flex-col gap-4 ">
       <div className="flex flex-row justify-between">
         <AnimatedTabs
-          tabs={['trending', 'new']}
+          tabs={['🔥 Hot', '👀 Fresh rumours']}
           activeTab={selected}
           onTabChange={(tab) => {
-            setSelected(tab as 'new' | 'trending')
-            router.push(tab === 'new' ? '/anoncast/new' : '/')
+            setSelected(tab as '🔥 Hot' | '👀 Fresh rumours')
+            router.push(tab === '👀 Fresh rumours' ? '/anoncast/new' : '/')
           }}
           layoutId="feed-tabs"
         />
       </div>
-      {selected === 'new' ? (
+      {selected === '👀 Fresh rumours' ? (
         isNewLoading ? (
           <SkeletonPosts />
         ) : newPosts?.pages[0]?.length && newPosts?.pages[0]?.length > 0 ? (
@@ -141,7 +141,7 @@ function Posts({
   casts?: FarcasterCast[]
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 rounded-xl">
       {casts?.map((cast) => (
         <Link href={`/posts/${cast.hash}`} key={cast.hash}>
           <PostDisplay cast={cast} />

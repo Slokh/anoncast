@@ -137,7 +137,7 @@ export function PostDisplay({
   const sanitizedText = cleanText(cast.text)
 
   return (
-    <div className="relative [overflow-wrap:anywhere] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden">
+    <div className="relative [overflow-wrap:anywhere] rounded-xl overflow-hidden gradient-border-wrapper flex bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary">
       <div className="flex flex-row gap-4  p-4 sm:p-6  ">
         <div className="flex flex-col gap-2 w-full">
           <div className="flex flex-row gap-4 justify-between">
