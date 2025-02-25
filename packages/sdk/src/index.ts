@@ -30,7 +30,7 @@ export class AnonWorldSDK {
   private token: string | null
 
   constructor(apiUrl?: string) {
-    this.apiUrl = apiUrl || 'https://rumourcast-v2-rumour-testing.up.railway.app/'
+    this.apiUrl = apiUrl || 'https://rumourcast-v2-rumour-testing.up.railway.app'
   }
 
   public setToken(token: string) {
