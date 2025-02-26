@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["bun"]
+
+[start]
+cmd = "bun api:start"
