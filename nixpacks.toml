@@ -4,5 +4,8 @@ nixPkgs = ["bun"]
 [phases.build]
 cmds = []
 
+[phases.install]
+cmds = ["bun i --no-save"]
+
 [start]
 cmd = "bun run api:start"
