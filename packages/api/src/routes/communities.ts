@@ -7,7 +7,7 @@ import { ActionType, Token } from '@anonworld/common'
 import { tokens } from '../services/tokens'
 import { parseUnits } from 'viem'
 
-const ANONWORLD_FID = 899289
+const ANONWORLD_FID = 884230
 
 export const communitiesRoutes = createElysia({ prefix: '/communities' })
   .get('/', async () => {

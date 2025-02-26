@@ -124,7 +124,7 @@ const backfillLikes = async () => {
 
 async function deleteIrrelevantReplies() {
   const accounts = await db.socials.listFarcasterAccounts()
-  const fids = accounts.map((account) => account.fid).filter((fid) => fid !== 899289)
+  const fids = accounts.map((account) => account.fid).filter((fid) => fid !== 884230)
   await db.db.delete(postRepliesTable).where(inArray(postRepliesTable.fid, fids))
 }
 

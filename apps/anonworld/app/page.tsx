@@ -11,7 +11,7 @@ export default function Home() {
         <PostFeedSelector selected="trending" />
         <NewPost />
       </XStack>
-      <TrendingFeed fid={899289} />
+      <TrendingFeed fid={884230} />
     </Content>
   )
 }

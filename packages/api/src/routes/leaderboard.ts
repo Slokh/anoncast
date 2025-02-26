@@ -226,7 +226,7 @@ async function getDataByCredentialId(community?: Community) {
     }
 
     if (
-      (community || post.targetFid === 899289) &&
+      (community || post.targetFid === 884230) &&
       !data[credentialId].posts.find((p) => p.hash === post.hash)
     ) {
       data[credentialId].posts.push(post)
@@ -261,7 +261,7 @@ async function getDataByCredentialId(community?: Community) {
     })
 
     if (
-      (community || post.targetFid === 899289) &&
+      (community || post.targetFid === 884230) &&
       !data[credentialId].posts.find((p) => p.hash === post.hash)
     ) {
       data[credentialId].posts.push(post)
@@ -287,7 +287,7 @@ async function getDataByCredentialId(community?: Community) {
       }
     }
 
-    if (community || row.targetFid === 899289) {
+    if (community || row.targetFid === 884230) {
       data[credentialId].posts.push(row)
     }
   }

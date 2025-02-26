@@ -33,7 +33,7 @@ const getFidSets = async () => {
     Array.from({ length: maxFid }, (_, i) => i + 1).filter((fid) => !anonFids.has(fid))
   )
 
-  return { anonworldFid: 899289, anonFids, otherFids, maxFid }
+  return { anonworldFid: 884230, anonFids, otherFids, maxFid }
 }
 
 async function handleEvent(

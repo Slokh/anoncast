@@ -9,7 +9,7 @@ export class FeedService {
     let post = await db.posts.get(hash)
 
     // Resolve original post
-    if (post?.fid !== 899289) {
+    if (post?.fid !== 884230) {
       const parent = await db.relationships.getParent(hash)
       if (parent) {
         post = await db.posts.get(parent.post_hash)
