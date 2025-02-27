@@ -13,10 +13,11 @@ import { ReactNode } from 'react'
 
 const config = getDefaultConfig({
   ...viemConfig,
-  appName: 'anoncast',
-  projectId: '302e299e8d6c292b6aeb9f313321e134',
+  appName: 'RumourCast',
+  projectId: 'c615d5a18982cf9eb69f78706b187884',
   ssr: true,
 })
+
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
