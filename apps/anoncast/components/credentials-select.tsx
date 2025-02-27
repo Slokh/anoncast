@@ -51,7 +51,7 @@ export function CredentialsSelect({
     () =>
       credentials.filter(
         (credential) =>
-          credential.metadata.tokenAddress === TOKEN_ADDRESS &&
+          credential.metadata.tokenAddress?.toLowerCase() === TOKEN_ADDRESS.toLowerCase() &&
           new Date(credential.verified_at).getTime() + CREDENTIAL_EXPIRATION_TIME >
             Date.now()
       ),
