@@ -1,5 +1,7 @@
 [phases.setup]
 nixPkgs = ["bun"]
+nixOverlays = []
+nixpkgsArchive = "nixos-24.11"
 
 [phases.build]
 cmds = []
