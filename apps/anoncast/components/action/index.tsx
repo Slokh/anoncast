@@ -4,6 +4,7 @@ import { CircleCheckIcon } from 'lucide-react'
 import { CircleXIcon } from 'lucide-react'
 import { CircleMinusIcon } from 'lucide-react'
 import { CreatePost } from '../create-post'
+import { CreateArticle } from '../create-article'
 import { POST_AMOUNT, PROMOTE_AMOUNT, DELETE_AMOUNT } from '@/lib/utils'
 import { useAccount } from 'wagmi'
 import { Separator } from '../ui/separator'
@@ -14,7 +15,7 @@ export default function ActionComponent({
   description,
   requirements,
 }: {
-  variant?: 'post' | 'launch'
+  variant?: 'post' | 'launch' | 'article'
   title?: string
   description?: string
   requirements?: Array<{ amount: number; label: string }>
@@ -98,7 +99,7 @@ export default function ActionComponent({
         </div>
       </div>
       <Separator />
-      <CreatePost variant={variant} />
+      {variant === 'article' ? <CreateArticle /> : <CreatePost variant={variant} />}
     </Alert>
   )
 }

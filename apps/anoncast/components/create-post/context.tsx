@@ -14,7 +14,7 @@ import { hashMessage } from 'viem'
 import { ToastAction } from '../ui/toast'
 import { CREATE_POST_ACTION_ID } from '@/lib/utils'
 
-type Variant = 'anoncast' | 'anonfun' | 'anon'
+type Variant = 'anoncast' | 'anonfun' | 'anon' | 'anonpub'
 
 interface CreatePostContextProps {
   text: string | null
