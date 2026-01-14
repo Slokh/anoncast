@@ -17,14 +17,12 @@ export function ShutdownBanner() {
   if (!show) return null
 
   return (
-    <div className="bg-primary px-4 py-3 text-center text-sm text-primary-foreground">
-      <p>
-        <strong>anon.world</strong> has been shut down.{' '}
-        <a href="https://anoncast.org" className="underline hover:opacity-80">
-          anoncast
-        </a>{' '}
-        lives on.
-      </p>
+    <div className="bg-orange-500 px-4 py-1.5 text-center text-xs font-medium text-white">
+      <strong>anon.world</strong> has been shut down.{' '}
+      <a href="https://anoncast.org" className="underline hover:opacity-80">
+        anoncast
+      </a>{' '}
+      lives on.
     </div>
   )
 }
