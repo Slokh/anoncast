@@ -1,0 +1,19 @@
+{
+  "name": "anon",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun run --filter @anon/web dev",
+    "build": "bun run --filter @anon/web build",
+    "lint": "bun run --filter '*' lint",
+    "test:e2e": "bun run --env-file=packages/credentials/.env scripts/e2e-test.ts",
+    "cast:delete": "bun run --env-file=packages/credentials/.env scripts/delete-cast.ts"
+  },
+  "dependencies": {
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
