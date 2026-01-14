@@ -12,7 +12,7 @@ type PostRequest = {
 
 // Content that cannot be promoted to Twitter
 const UNABLE_TO_PROMOTE_PATTERNS = [
-  /.*@clanker.*(launch|deploy|make).*/is,
+  /@clanker.*(launch|deploy|make)/i,
   /.*dexscreener.com.*/i,
   /.*dextools.io.*/i,
   /.*0x[a-fA-F0-9]{40}.*/i,
