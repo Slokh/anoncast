@@ -63,9 +63,6 @@ TWITTER_ACCESS_SECRET=
 
 # Image uploads
 UPLOAD_API_KEY=
-
-# WalletConnect
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 ```
 
 ## Links
