@@ -12,13 +12,8 @@ if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
     exit 1
 fi
 
-if [ -z "$WITHDRAW_VERIFIER" ]; then
-    echo "Error: WITHDRAW_VERIFIER not set (deploy ZK verifier first)"
-    exit 1
-fi
-
-if [ -z "$TRANSFER_VERIFIER" ]; then
-    echo "Error: TRANSFER_VERIFIER not set (deploy ZK verifier first)"
+if [ -z "$TOKEN_ADDRESS" ]; then
+    echo "Error: TOKEN_ADDRESS not set (address of ERC20 token to use)"
     exit 1
 fi
 
@@ -31,6 +26,7 @@ fi
 BASE_SEPOLIA_RPC_URL=${BASE_SEPOLIA_RPC_URL:-"https://sepolia.base.org"}
 
 echo "Deploying to Base Sepolia..."
+echo "Token: $TOKEN_ADDRESS"
 
 # Run forge script and capture output
 OUTPUT=$(forge script script/Deploy.s.sol:DeployTestnet \
@@ -42,17 +38,16 @@ OUTPUT=$(forge script script/Deploy.s.sol:DeployTestnet \
 echo "$OUTPUT"
 
 # Parse addresses from output
-TEST_TOKEN=$(echo "$OUTPUT" | grep "TestANON deployed to:" | awk '{print $4}')
-POOL=$(echo "$OUTPUT" | grep "AnonPool deployed to:" | awk '{print $4}')
+POOL=$(echo "$OUTPUT" | grep "AnonPool:" | awk '{print $2}')
 
-if [ -z "$TEST_TOKEN" ] || [ -z "$POOL" ]; then
+if [ -z "$POOL" ]; then
     echo "Error: Could not parse deployed addresses"
     exit 1
 fi
 
 echo ""
 echo "=== Deployment Successful ==="
-echo "TestANON: $TEST_TOKEN"
+echo "Token: $TOKEN_ADDRESS"
 echo "AnonPool: $POOL"
 echo ""
 
@@ -79,9 +74,8 @@ update_env() {
     fi
 }
 
-update_env "NEXT_PUBLIC_TESTNET_ANON_TOKEN" "$TEST_TOKEN" "$WEB_ENV"
-update_env "NEXT_PUBLIC_ANON_POOL_CONTRACT" "$POOL" "$WEB_ENV"
+update_env "NEXT_PUBLIC_POOL_CONTRACT" "$POOL" "$WEB_ENV"
 
 echo "Updated $WEB_ENV with contract addresses"
 echo ""
-echo "Run the app with: bun run dev:testnet"
+echo "Run the app with: bun run dev"

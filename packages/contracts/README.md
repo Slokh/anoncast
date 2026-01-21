@@ -51,7 +51,6 @@ The main contract implementing a privacy pool with the following features:
 |----------|-------------|
 | `AnonPool.sol` | Main privacy pool contract |
 | `AuctionSpender.sol` | Rate-limited spender for slot-based auctions |
-| `TestANON.sol` | Test ERC20 token for testnet deployment |
 | `verifiers/TransferVerifier.sol` | Auto-generated ZK verifier for transfers |
 | `verifiers/WithdrawVerifier.sol` | Auto-generated ZK verifier for withdrawals |
 

@@ -2,33 +2,35 @@
 pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
-import {TestANON} from "../src/TestANON.sol";
 import {AnonPool} from "../src/AnonPool.sol";
 import {AuctionSpender} from "../src/AuctionSpender.sol";
+import {WithdrawVerifier} from "../src/verifiers/WithdrawVerifier.sol";
+import {TransferVerifier} from "../src/verifiers/TransferVerifier.sol";
 
 /// @title DeployTestnet
-/// @notice Deploys core contracts to testnet
-/// @dev Requires WITHDRAW_VERIFIER and TRANSFER_VERIFIER addresses (deploy ZK verifiers first)
+/// @notice Deploys pool and verifiers to testnet
+/// @dev Requires TOKEN_ADDRESS env var for the ERC20 token to use
 contract DeployTestnet is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address withdrawVerifier = vm.envAddress("WITHDRAW_VERIFIER");
-        address transferVerifier = vm.envAddress("TRANSFER_VERIFIER");
+        address tokenAddress = vm.envAddress("TOKEN_ADDRESS");
         address spender = vm.envAddress("SPENDER_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy test token
-        TestANON testToken = new TestANON();
-        console.log("TestANON deployed to:", address(testToken));
+        // Deploy verifiers
+        WithdrawVerifier withdrawVerifier = new WithdrawVerifier();
+        TransferVerifier transferVerifier = new TransferVerifier();
+        console.log("WithdrawVerifier:", address(withdrawVerifier));
+        console.log("TransferVerifier:", address(transferVerifier));
 
         // Deploy pool
         AnonPool pool = new AnonPool(
-            address(testToken),
-            withdrawVerifier,
-            transferVerifier
+            tokenAddress,
+            address(withdrawVerifier),
+            address(transferVerifier)
         );
-        console.log("AnonPool deployed to:", address(pool));
+        console.log("AnonPool:", address(pool));
 
         // Add server wallet as approved spender
         pool.addSpender(spender);
@@ -38,30 +40,35 @@ contract DeployTestnet is Script {
 
         // Output for easy copy-paste to .env
         console.log("\n=== Add to .env.local ===");
-        console.log("NEXT_PUBLIC_TESTNET_ANON_TOKEN=%s", address(testToken));
-        console.log("NEXT_PUBLIC_ANON_POOL_CONTRACT=%s", address(pool));
+        console.log("NEXT_PUBLIC_POOL_CONTRACT=%s", address(pool));
     }
 }
 
 /// @title DeployMainnet
-/// @notice Deploys pool to mainnet (uses existing $ANON token)
+/// @notice Deploys pool and verifiers to mainnet (uses existing $ANON token)
 contract DeployMainnet is Script {
+    // Real $ANON token on Base mainnet
+    address constant ANON_TOKEN = 0x0Db510e79909666d6dEc7f5e49370838c16D950f;
+
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address anonToken = vm.envAddress("ANON_TOKEN");
-        address withdrawVerifier = vm.envAddress("WITHDRAW_VERIFIER");
-        address transferVerifier = vm.envAddress("TRANSFER_VERIFIER");
         address spender = vm.envAddress("SPENDER_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
+        // Deploy verifiers
+        WithdrawVerifier withdrawVerifier = new WithdrawVerifier();
+        TransferVerifier transferVerifier = new TransferVerifier();
+        console.log("WithdrawVerifier:", address(withdrawVerifier));
+        console.log("TransferVerifier:", address(transferVerifier));
+
         // Deploy pool
         AnonPool pool = new AnonPool(
-            anonToken,
-            withdrawVerifier,
-            transferVerifier
+            ANON_TOKEN,
+            address(withdrawVerifier),
+            address(transferVerifier)
         );
-        console.log("AnonPool deployed to:", address(pool));
+        console.log("AnonPool:", address(pool));
 
         // Add server wallet as approved spender
         pool.addSpender(spender);
@@ -70,7 +77,7 @@ contract DeployMainnet is Script {
         vm.stopBroadcast();
 
         console.log("\n=== Add to .env ===");
-        console.log("NEXT_PUBLIC_ANON_POOL_CONTRACT=%s", address(pool));
+        console.log("NEXT_PUBLIC_POOL_CONTRACT=%s", address(pool));
     }
 }
 
@@ -118,13 +125,14 @@ contract DeployAuctionSpender is Script {
 }
 
 /// @title DeployFullStack
-/// @notice Deploys complete stack: TestToken, AnonPool, and AuctionSpender
-/// @dev For testnet deployments with full auction functionality
+/// @notice Deploys complete stack: Verifiers, AnonPool, and AuctionSpender
+/// @dev For production deployments with full auction functionality
 contract DeployFullStack is Script {
+    // Real $ANON token on Base mainnet
+    address constant ANON_TOKEN = 0x0Db510e79909666d6dEc7f5e49370838c16D950f;
+
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address withdrawVerifier = vm.envAddress("WITHDRAW_VERIFIER");
-        address transferVerifier = vm.envAddress("TRANSFER_VERIFIER");
         address auctionOperator = vm.envAddress("AUCTION_OPERATOR");
 
         // Configuration
@@ -134,17 +142,19 @@ contract DeployFullStack is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy test token
-        TestANON testToken = new TestANON();
-        console.log("TestANON deployed to:", address(testToken));
+        // 1. Deploy verifiers
+        WithdrawVerifier withdrawVerifier = new WithdrawVerifier();
+        TransferVerifier transferVerifier = new TransferVerifier();
+        console.log("WithdrawVerifier:", address(withdrawVerifier));
+        console.log("TransferVerifier:", address(transferVerifier));
 
         // 2. Deploy pool
         AnonPool pool = new AnonPool(
-            address(testToken),
-            withdrawVerifier,
-            transferVerifier
+            ANON_TOKEN,
+            address(withdrawVerifier),
+            address(transferVerifier)
         );
-        console.log("AnonPool deployed to:", address(pool));
+        console.log("AnonPool:", address(pool));
 
         // 3. Deploy AuctionSpender
         AuctionSpender auctionSpender = new AuctionSpender(
@@ -154,7 +164,7 @@ contract DeployFullStack is Script {
             settlementWindowStart,
             settlementWindowEnd
         );
-        console.log("AuctionSpender deployed to:", address(auctionSpender));
+        console.log("AuctionSpender:", address(auctionSpender));
 
         // 4. Add AuctionSpender as approved spender
         pool.addSpender(address(auctionSpender));
@@ -162,9 +172,8 @@ contract DeployFullStack is Script {
 
         vm.stopBroadcast();
 
-        console.log("\n=== Add to .env.local ===");
-        console.log("NEXT_PUBLIC_TESTNET_ANON_TOKEN=%s", address(testToken));
-        console.log("NEXT_PUBLIC_ANON_POOL_CONTRACT=%s", address(pool));
-        console.log("AUCTION_SPENDER_CONTRACT=%s", address(auctionSpender));
+        console.log("\n=== Add to .env ===");
+        console.log("NEXT_PUBLIC_POOL_CONTRACT=%s", address(pool));
+        console.log("NEXT_PUBLIC_AUCTION_CONTRACT=%s", address(auctionSpender));
     }
 }

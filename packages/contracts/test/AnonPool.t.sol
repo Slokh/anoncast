@@ -3,8 +3,17 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {AnonPool} from "../src/AnonPool.sol";
-import {TestANON} from "../src/TestANON.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+/// @dev Simple test token for unit tests
+contract MockERC20 is ERC20 {
+    constructor() ERC20("Mock Token", "MOCK") {}
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+}
 
 /// @dev Test-only mock verifiers - DO NOT use in production
 contract TestWithdrawVerifier {
@@ -54,7 +63,7 @@ contract ZeroFeeToken {
 
 contract AnonPoolTest is Test {
     AnonPool public pool;
-    TestANON public token;
+    MockERC20 public token;
     TestWithdrawVerifier public withdrawVerifier;
     TestTransferVerifier public transferVerifier;
 
@@ -70,7 +79,7 @@ contract AnonPoolTest is Test {
     event SpenderRemoved(address indexed spender);
 
     function setUp() public {
-        token = new TestANON();
+        token = new MockERC20();
         withdrawVerifier = new TestWithdrawVerifier();
         transferVerifier = new TestTransferVerifier();
 

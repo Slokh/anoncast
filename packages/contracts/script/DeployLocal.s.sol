@@ -2,21 +2,19 @@
 pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
-import {TestANON} from "../src/TestANON.sol";
 import {AnonPool} from "../src/AnonPool.sol";
 import {AuctionSpender} from "../src/AuctionSpender.sol";
-
-/// @notice Mock verifier that always returns true (for local testing)
-contract MockVerifier {
-    function verify(bytes calldata, bytes32[] calldata) external pure returns (bool) {
-        return true;
-    }
-}
+import {WithdrawVerifier} from "../src/verifiers/WithdrawVerifier.sol";
+import {TransferVerifier} from "../src/verifiers/TransferVerifier.sol";
 
 /// @title DeployLocal
-/// @notice Deploys complete stack to local Anvil for development
-/// @dev Uses mock verifiers that always return true - NOT FOR PRODUCTION
+/// @notice Deploys complete stack to local Anvil fork of Base mainnet
+/// @dev Uses real ZK verifiers and real $ANON token
+///      Run with: anvil --fork-url https://mainnet.base.org
 contract DeployLocal is Script {
+    // Real $ANON token on Base mainnet
+    address constant ANON_TOKEN = 0x0Db510e79909666d6dEc7f5e49370838c16D950f;
+
     function run() external {
         // Use Anvil's default account #0
         uint256 deployerPrivateKey = vm.envOr(
@@ -26,28 +24,25 @@ contract DeployLocal is Script {
 
         address deployer = vm.addr(deployerPrivateKey);
         console.log("Deploying from:", deployer);
+        console.log("Using $ANON token:", ANON_TOKEN);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy mock verifiers (always return true)
-        MockVerifier withdrawVerifier = new MockVerifier();
-        MockVerifier transferVerifier = new MockVerifier();
-        console.log("MockWithdrawVerifier:", address(withdrawVerifier));
-        console.log("MockTransferVerifier:", address(transferVerifier));
+        // 1. Deploy real ZK verifiers
+        WithdrawVerifier withdrawVerifier = new WithdrawVerifier();
+        TransferVerifier transferVerifier = new TransferVerifier();
+        console.log("WithdrawVerifier:", address(withdrawVerifier));
+        console.log("TransferVerifier:", address(transferVerifier));
 
-        // 2. Deploy test token
-        TestANON testToken = new TestANON();
-        console.log("TestANON:", address(testToken));
-
-        // 3. Deploy pool
+        // 2. Deploy pool using real $ANON token
         AnonPool pool = new AnonPool(
-            address(testToken),
+            ANON_TOKEN,
             address(withdrawVerifier),
             address(transferVerifier)
         );
         console.log("AnonPool:", address(pool));
 
-        // 4. Deploy AuctionSpender (slot starts now, 5 min settlement window)
+        // 3. Deploy AuctionSpender (slot starts now, 5 min settlement window)
         AuctionSpender auctionSpender = new AuctionSpender(
             address(pool),
             deployer, // deployer is also the operator for local testing
@@ -57,13 +52,9 @@ contract DeployLocal is Script {
         );
         console.log("AuctionSpender:", address(auctionSpender));
 
-        // 5. Add AuctionSpender as approved spender
+        // 4. Add AuctionSpender as approved spender
         pool.addSpender(address(auctionSpender));
         console.log("AuctionSpender added as spender");
-
-        // 6. Mint test tokens to deployer (1 million tokens)
-        testToken.mint(deployer, 1_000_000 * 10**18);
-        console.log("Minted 1,000,000 tokens to deployer");
 
         vm.stopBroadcast();
 
@@ -75,7 +66,6 @@ contract DeployLocal is Script {
         console.log("Add to apps/web/.env.local:\n");
         console.log("NEXT_PUBLIC_TESTNET=true");
         console.log("NEXT_PUBLIC_TESTNET_RPC_URL=http://127.0.0.1:8545");
-        console.log("NEXT_PUBLIC_TESTNET_ANON_TOKEN=%s", address(testToken));
         console.log("NEXT_PUBLIC_POOL_CONTRACT=%s", address(pool));
         console.log("NEXT_PUBLIC_AUCTION_CONTRACT=%s", address(auctionSpender));
 
@@ -91,10 +81,10 @@ contract DeployLocal is Script {
         console.log("\n========================================");
         console.log("USEFUL COMMANDS");
         console.log("========================================\n");
-        console.log("Mint tokens to an address:");
-        console.log("  cast send %s 'mint(address,uint256)' <ADDRESS> 1000000000000000000000 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", address(testToken));
-        console.log("\nCheck token balance:");
-        console.log("  cast call %s 'balanceOf(address)(uint256)' <ADDRESS>", address(testToken));
+        console.log("Check $ANON balance:");
+        console.log("  cast call %s 'balanceOf(address)(uint256)' <ADDRESS>", ANON_TOKEN);
+        console.log("\nImpersonate a whale (to get tokens for testing):");
+        console.log("  # Find a whale on basescan, then use cast send --unlocked");
         console.log("\nCheck pool stats:");
         console.log("  cast call %s 'getPoolStats()(uint256,uint32,bytes32,uint32)'", address(pool));
     }

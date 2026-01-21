@@ -4,37 +4,31 @@ This document provides a comprehensive checklist for testing the AnonPool system
 
 ## Quick Start: Local Development
 
-The fastest way to test locally is using the mock verifier setup:
+The local development setup forks Base mainnet and uses the real $ANON token:
 
 ```bash
-# Start Anvil and deploy contracts with mock verifiers
+# Start Anvil (forks Base mainnet) and deploy contracts
 bun run dev:local
 
 # In another terminal, start the frontend
 cd apps/web && bun run dev
 ```
 
-This deploys contracts with mock verifiers that always return `true`, allowing you to test the full UI flow without generating real ZK proofs.
+This deploys:
+- Real ZK verifiers (WithdrawVerifier, TransferVerifier)
+- AnonPool using the real $ANON token
+- AuctionSpender for slot-based settlements
 
-### Why Mock Verifiers?
+### Getting Test Tokens
 
-The real ZK verifiers are ~140KB Solidity contracts that:
-1. Cause "Yul stack layout" compilation errors with Foundry's optimizer
-2. Require real ZK proofs (generated from Noir circuits + Barretenberg)
-
-Mock verifiers let you:
-- Test deposit/withdraw/transfer UI flows
-- Verify contract interactions work correctly
-- Develop frontend features without proof generation complexity
-
-For full ZK proof testing, see the "Integration Testing" section below.
-
-### Fork from Base Sepolia
-
-To test against real chain state (e.g., existing token balances):
+Since we fork mainnet, you can impersonate any $ANON holder for testing:
 
 ```bash
-bun run dev:local:fork
+# Find a whale address on basescan, then use cast with --unlocked
+cast send $ANON_TOKEN "transfer(address,uint256)" <YOUR_ADDRESS> 1000000000000000000000 \
+  --from <WHALE_ADDRESS> \
+  --unlocked \
+  --rpc-url http://127.0.0.1:8545
 ```
 
 ---
