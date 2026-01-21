@@ -16,12 +16,17 @@ export const ACTIVE_CHAIN = IS_TESTNET
 // Chain ID
 export const CHAIN_ID = ACTIVE_CHAIN.id
 
+// Real $ANON token address on Base mainnet
+const ANON_TOKEN_MAINNET = '0x0Db510e79909666d6dEc7f5e49370838c16D950f' as const
+
 // Contract addresses
 export const CONTRACTS = {
-  // $ANON token (or test token on testnet)
+  // $ANON token - use mainnet address for local fork, env var for testnet
   ANON_TOKEN: IS_TESTNET
-    ? (process.env.NEXT_PUBLIC_TESTNET_ANON_TOKEN as `0x${string}`)
-    : ('0x0Db510e79909666d6dEc7f5e49370838c16D950f' as const),
+    ? (isLocalhost
+        ? ANON_TOKEN_MAINNET  // Local fork uses real mainnet token
+        : (process.env.NEXT_PUBLIC_TESTNET_ANON_TOKEN as `0x${string}`))
+    : ANON_TOKEN_MAINNET,
 
   // AnonPool contract
   POOL: (process.env.NEXT_PUBLIC_POOL_CONTRACT as `0x${string}`) || undefined,
