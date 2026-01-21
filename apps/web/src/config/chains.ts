@@ -7,23 +7,10 @@ export const IS_TESTNET = process.env.NEXT_PUBLIC_TESTNET === 'true'
 const isLocalhost = process.env.NEXT_PUBLIC_TESTNET_RPC_URL?.includes('127.0.0.1') ||
                     process.env.NEXT_PUBLIC_TESTNET_RPC_URL?.includes('localhost')
 
-// Local Anvil chain definition
-const localhost: Chain = {
-  id: 31337,
-  name: 'Localhost',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Ether',
-    symbol: 'ETH',
-  },
-  rpcUrls: {
-    default: { http: ['http://127.0.0.1:8545'] },
-  },
-}
-
-// Active chain - use localhost if RPC URL points to 127.0.0.1
+// When forking Base mainnet locally, Anvil preserves chain ID 8453
+// We use the same Base chain config but will override RPC in the client
 export const ACTIVE_CHAIN = IS_TESTNET
-  ? (isLocalhost ? localhost : baseSepolia)
+  ? (isLocalhost ? base : baseSepolia)
   : base
 
 // Chain ID
@@ -48,9 +35,9 @@ export const RPC_URL = IS_TESTNET
   ? process.env.NEXT_PUBLIC_TESTNET_RPC_URL || 'https://sepolia.base.org'
   : process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'
 
-// Block explorer
+// Block explorer (local fork still uses basescan for tx lookup)
 export const EXPLORER_URL = IS_TESTNET
-  ? (isLocalhost ? '' : 'https://sepolia.basescan.org')
+  ? (isLocalhost ? 'https://basescan.org' : 'https://sepolia.basescan.org')
   : 'https://basescan.org'
 
 // Token decimals
@@ -58,11 +45,10 @@ export const TOKEN_DECIMALS = 18
 
 // Helper to get explorer link
 export function getExplorerLink(type: 'tx' | 'address' | 'token', value: string): string {
-  if (!EXPLORER_URL) return '#' // No explorer for localhost
   return `${EXPLORER_URL}/${type}/${value}`
 }
 
 // Display name for the network
 export const NETWORK_NAME = IS_TESTNET
-  ? (isLocalhost ? 'Localhost' : 'Base Sepolia')
+  ? (isLocalhost ? 'Base (Local)' : 'Base Sepolia')
   : 'Base'

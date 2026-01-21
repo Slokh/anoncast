@@ -11,15 +11,11 @@ const IS_TESTNET = process.env.NEXT_PUBLIC_TESTNET === 'true'
 const RPC_URL = process.env.NEXT_PUBLIC_TESTNET_RPC_URL || ''
 const isLocalhost = RPC_URL.includes('127.0.0.1') || RPC_URL.includes('localhost')
 
-// Local Anvil chain for development
-const localhost: Chain = {
-  id: 31337,
-  name: 'Localhost',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Ether',
-    symbol: 'ETH',
-  },
+// Local Anvil chain for development (forking Base mainnet)
+// When forking, Anvil preserves the original chain ID (8453 for Base)
+// We override the RPC URL to point to localhost
+const localBase: Chain = {
+  ...base,
   rpcUrls: {
     default: { http: [RPC_URL || 'http://127.0.0.1:8545'] },
   },
@@ -28,7 +24,8 @@ const localhost: Chain = {
 // Select chain based on environment
 const getChains = (): readonly [Chain, ...Chain[]] => {
   if (IS_TESTNET) {
-    return isLocalhost ? [localhost] : [baseSepolia]
+    // When running locally, use Base chain config but with localhost RPC
+    return isLocalhost ? [localBase] : [baseSepolia]
   }
   return [base]
 }
