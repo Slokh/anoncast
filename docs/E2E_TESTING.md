@@ -2,6 +2,43 @@
 
 This document provides a comprehensive checklist for testing the AnonPool system end-to-end before deployment.
 
+## Quick Start: Local Development
+
+The fastest way to test locally is using the mock verifier setup:
+
+```bash
+# Start Anvil and deploy contracts with mock verifiers
+bun run dev:local
+
+# In another terminal, start the frontend
+cd apps/web && bun run dev
+```
+
+This deploys contracts with mock verifiers that always return `true`, allowing you to test the full UI flow without generating real ZK proofs.
+
+### Why Mock Verifiers?
+
+The real ZK verifiers are ~140KB Solidity contracts that:
+1. Cause "Yul stack layout" compilation errors with Foundry's optimizer
+2. Require real ZK proofs (generated from Noir circuits + Barretenberg)
+
+Mock verifiers let you:
+- Test deposit/withdraw/transfer UI flows
+- Verify contract interactions work correctly
+- Develop frontend features without proof generation complexity
+
+For full ZK proof testing, see the "Integration Testing" section below.
+
+### Fork from Base Sepolia
+
+To test against real chain state (e.g., existing token balances):
+
+```bash
+bun run dev:local:fork
+```
+
+---
+
 ## Prerequisites
 
 - [ ] Nargo v0.38.0+ installed (`nargo --version`)
