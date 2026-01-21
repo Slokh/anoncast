@@ -14,12 +14,14 @@ remappings = [
     "forge-std/=lib/forge-std/src/",
 ]
 
-[rpc_endpoints]
-base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
-base = "${BASE_RPC_URL}"
+# RPC endpoints - set these env vars for remote deployment
+# [rpc_endpoints]
+# base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+# base = "${BASE_RPC_URL}"
 
-[etherscan]
-base_sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
-base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
+# Etherscan verification - set BASESCAN_API_KEY for contract verification
+# [etherscan]
+# base_sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
+# base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
