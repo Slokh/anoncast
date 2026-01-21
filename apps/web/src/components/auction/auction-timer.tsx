@@ -67,8 +67,24 @@ export function AuctionTimer() {
   if (!state) {
     return (
       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-        <CardContent className="flex items-center justify-center p-6">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Timer skeleton */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
+                <Clock className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+                <div className="mt-1 h-3 w-20 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+            {/* Bid skeleton */}
+            <div className="text-right">
+              <div className="h-7 w-28 animate-pulse rounded bg-muted" />
+              <div className="mt-1 h-3 w-20 animate-pulse rounded bg-muted ml-auto" />
+            </div>
+          </div>
         </CardContent>
       </Card>
     )

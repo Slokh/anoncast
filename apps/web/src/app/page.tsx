@@ -1,19 +1,19 @@
 import { Header } from '@/components/header'
 import { AuctionTimer } from '@/components/auction/auction-timer'
 import { AuctionBidder } from '@/components/auction/auction-bidder'
+import { PoolStats } from '@/components/auction/pool-stats'
 
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
 
-      <main className="mx-auto w-full max-w-lg px-4 py-8">
-        <div className="space-y-4">
-          <AuctionTimer />
-          <AuctionBidder />
-        </div>
+      <main className="mx-auto w-full max-w-lg space-y-4 px-4 py-8">
+        <PoolStats />
+        <AuctionTimer />
+        <AuctionBidder />
 
-        <div className="mt-6 rounded-lg border border-border bg-card p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="text-lg font-semibold">How it works</h2>
           <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
             <li className="flex gap-2">

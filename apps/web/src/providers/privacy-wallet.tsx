@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useAccount, useSignMessage, useReadContract } from 'wagmi'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useAccount, useSignMessage } from 'wagmi'
 import { formatUnits, toHex, pad } from 'viem'
 import { CONTRACTS, RPC_URL } from '@/config/chains'
 
-// Contract address from config
-const AUCTION_CONTRACT = CONTRACTS.AUCTION
+// Contract addresses from config
 const POOL_CONTRACT = CONTRACTS.POOL
 
 // Proof freshness thresholds
@@ -56,15 +55,6 @@ type WalletBalance = {
   noteCount: number
 }
 
-type PrivacyWalletState = {
-  isUnlocked: boolean
-  isLoading: boolean
-  isSyncing: boolean
-  balance: WalletBalance | null
-  notes: Note[]
-  error: string | null
-}
-
 type TransferPreparation = {
   inputNote: Note
   changeNote: { secret: bigint; nullifier: bigint; commitment: bigint; amount: bigint }
@@ -74,79 +64,156 @@ type TransferPreparation = {
   nullifierHash: bigint
 }
 
+type PrivacyWalletContextValue = {
+  // State
+  isConnected: boolean
+  isUnlocked: boolean
+  isLoading: boolean
+  isSyncing: boolean
+  isInitializing: boolean
+  balance: WalletBalance | null
+  notes: Note[]
+  error: string | null
+  hasStoredSignature: boolean
+
+  // Actions
+  unlock: () => Promise<boolean>
+  lock: () => void
+  sync: () => Promise<void>
+  clearWallet: () => Promise<void>
+  clearStoredSignature: () => void
+  generateDeposit: (amount: bigint) => { commitment: bigint; note: any } | null
+  prepareTransfer: (outputAmount: bigint, outputCommitment: bigint) => Promise<TransferPreparation | null>
+  prepareTransferWithFreshnessCheck: (outputAmount: bigint, outputCommitment: bigint) => Promise<{
+    preparation: TransferPreparation | null
+    freshness: RootFreshness | null
+  }>
+  findNoteForTransfer: (outputAmount: bigint) => Note | null
+  canAffordTransfer: (outputAmount: bigint) => boolean
+  getClaimCredentials: (slotId: number) => { claimSecret: bigint; claimCommitment: bigint } | null
+  markNoteSpent: (commitment: bigint, txHash: string) => Promise<void>
+  formatBalance: (amount: bigint) => string
+  checkRootFreshness: (root: bigint) => Promise<RootFreshness | null>
+
+  // Constants
+  FRESHNESS_THRESHOLDS: typeof FRESHNESS_THRESHOLDS
+}
+
+const PrivacyWalletContext = createContext<PrivacyWalletContextValue | null>(null)
+
 // Lazy load the privacy wallet module
 async function loadPrivacyWallet() {
   const module = await import('@anon/pool/privacy-wallet')
   return module
 }
 
-export function usePrivacyWallet() {
-  const { address, isConnected } = useAccount()
+// Storage keys
+const SIGNATURE_STORAGE_KEY = 'anon_pool_signature'
+
+function saveSignature(address: string, signature: string) {
+  try {
+    const data = JSON.stringify({ address: address.toLowerCase(), signature })
+    localStorage.setItem(SIGNATURE_STORAGE_KEY, data)
+  } catch (err) {
+    console.error('Failed to save signature:', err)
+  }
+}
+
+function loadSignature(address: string): string | null {
+  try {
+    const stored = localStorage.getItem(SIGNATURE_STORAGE_KEY)
+    if (!stored) return null
+    const data = JSON.parse(stored)
+    // Only return signature if it's for the same address
+    if (data.address === address.toLowerCase()) {
+      return data.signature
+    }
+    return null
+  } catch (err) {
+    return null
+  }
+}
+
+function clearSignature() {
+  try {
+    localStorage.removeItem(SIGNATURE_STORAGE_KEY)
+  } catch (err) {
+    console.error('Failed to clear signature:', err)
+  }
+}
+
+export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
+  const { address, isConnected, status: accountStatus } = useAccount()
   const { signMessageAsync } = useSignMessage()
 
-  const [state, setState] = useState<PrivacyWalletState>({
-    isUnlocked: false,
-    isLoading: false,
-    isSyncing: false,
-    balance: null,
-    notes: [],
-    error: null,
-  })
+  const [isUnlocked, setIsUnlocked] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
+  const [balance, setBalance] = useState<WalletBalance | null>(null)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   // Store wallet instance in ref-like state
   const [walletInstance, setWalletInstance] = useState<any>(null)
+  const [hasStoredSignature, setHasStoredSignature] = useState(false)
 
-  // Check for existing wallet state on mount
+  // Check for existing signature on mount and auto-restore if available
   useEffect(() => {
-    if (!address || !AUCTION_CONTRACT) return
-
-    async function checkExistingState() {
-      try {
-        const { loadWalletState, PrivacyWallet } = await loadPrivacyWallet()
-        const savedState = loadWalletState()
-
-        if (savedState) {
-          // Recreate wallet from saved state
-          // Note: We need the signature to recreate, so we just mark as needing unlock
-          setState((prev) => ({
-            ...prev,
-            isUnlocked: false,
-            error: null,
-          }))
-        }
-      } catch (err) {
-        console.error('Failed to check wallet state:', err)
-      }
+    // Wait for wagmi to finish reconnecting
+    if (accountStatus === 'reconnecting' || accountStatus === 'connecting') {
+      return
     }
 
-    checkExistingState()
-  }, [address])
+    if (!address || !POOL_CONTRACT) {
+      setHasStoredSignature(false)
+      setIsInitializing(false)
+      return
+    }
+
+    const signature = loadSignature(address)
+    setHasStoredSignature(!!signature)
+
+    // Auto-restore ONLY if we have a stored signature (page refresh scenario)
+    if (signature && !walletInstance && !isLoading) {
+      restoreFromSignature(signature).finally(() => {
+        setIsInitializing(false)
+      })
+    } else {
+      setIsInitializing(false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, accountStatus])
+
+  // Clear state when wallet disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      setWalletInstance(null)
+      setIsUnlocked(false)
+      setIsLoading(false)
+      setIsSyncing(false)
+      setBalance(null)
+      setNotes([])
+      setError(null)
+    }
+  }, [isConnected])
 
   /**
-   * Unlock the privacy wallet by signing a message
+   * Restore wallet from a saved signature (no user interaction needed)
    */
-  const unlock = useCallback(async () => {
-    if (!address || !AUCTION_CONTRACT) {
-      setState((prev) => ({ ...prev, error: 'Wallet not connected or contract not configured' }))
-      return false
-    }
+  const restoreFromSignature = useCallback(async (signature: string) => {
+    if (!address || !POOL_CONTRACT) return false
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }))
+    setIsLoading(true)
+    setError(null)
 
     try {
-      const { PrivacyWallet, saveWalletState } = await loadPrivacyWallet()
-
-      // Get the sign message
-      const message = PrivacyWallet.getSignMessage()
-
-      // Request signature
-      const signature = await signMessageAsync({ message })
+      const { PrivacyWallet, saveWalletState, loadWalletState } = await loadPrivacyWallet()
 
       // Create wallet from signature
-      const wallet = PrivacyWallet.fromSignature(signature, AUCTION_CONTRACT, RPC_URL)
+      const wallet = PrivacyWallet.fromSignature(signature, POOL_CONTRACT, RPC_URL)
 
       // Try to load existing state
-      const { loadWalletState } = await loadPrivacyWallet()
       const savedState = loadWalletState()
       if (savedState) {
         wallet.importState(savedState)
@@ -155,28 +222,79 @@ export function usePrivacyWallet() {
       setWalletInstance(wallet)
 
       // Get initial balance
-      const balance = wallet.getBalance()
-      const notes = wallet.getAvailableNotes()
+      const walletBalance = wallet.getBalance()
+      const walletNotes = wallet.getAvailableNotes()
 
-      setState({
-        isUnlocked: true,
-        isLoading: false,
-        isSyncing: false,
-        balance,
-        notes,
-        error: null,
-      })
+      setIsUnlocked(true)
+      setIsLoading(false)
+      setBalance(walletBalance)
+      setNotes(walletNotes)
+
+      return true
+    } catch (err) {
+      console.error('Failed to restore wallet:', err)
+      // Clear invalid signature
+      clearSignature()
+      setHasStoredSignature(false)
+      setIsLoading(false)
+      setError('Failed to restore wallet session')
+      return false
+    }
+  }, [address])
+
+  /**
+   * Unlock the privacy wallet by signing a message
+   * Always requests a fresh signature (for manual connect flow)
+   */
+  const unlock = useCallback(async () => {
+    if (!address || !POOL_CONTRACT) {
+      setError('Wallet not connected or contract not configured')
+      return false
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const { PrivacyWallet, saveWalletState, loadWalletState } = await loadPrivacyWallet()
+
+      // Get the sign message
+      const message = PrivacyWallet.getSignMessage()
+
+      // Request signature (always fresh on manual connect)
+      const signature = await signMessageAsync({ message })
+
+      // Save signature for auto-restore on next visit
+      saveSignature(address, signature)
+      setHasStoredSignature(true)
+
+      // Create wallet from signature
+      const wallet = PrivacyWallet.fromSignature(signature, POOL_CONTRACT, RPC_URL)
+
+      // Try to load existing state
+      const savedState = loadWalletState()
+      if (savedState) {
+        wallet.importState(savedState)
+      }
+
+      setWalletInstance(wallet)
+
+      // Get initial balance
+      const walletBalance = wallet.getBalance()
+      const walletNotes = wallet.getAvailableNotes()
+
+      setIsUnlocked(true)
+      setIsLoading(false)
+      setBalance(walletBalance)
+      setNotes(walletNotes)
 
       // Save state
       saveWalletState(wallet.exportState())
 
       return true
     } catch (err) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: err instanceof Error ? err.message : 'Failed to unlock wallet',
-      }))
+      setIsLoading(false)
+      setError(err instanceof Error ? err.message : 'Failed to unlock wallet')
       return false
     }
   }, [address, signMessageAsync])
@@ -187,30 +305,24 @@ export function usePrivacyWallet() {
   const sync = useCallback(async () => {
     if (!walletInstance) return
 
-    setState((prev) => ({ ...prev, isSyncing: true }))
+    setIsSyncing(true)
 
     try {
       await walletInstance.syncFromChain()
 
       const { saveWalletState } = await loadPrivacyWallet()
-      const balance = walletInstance.getBalance()
-      const notes = walletInstance.getAvailableNotes()
+      const walletBalance = walletInstance.getBalance()
+      const walletNotes = walletInstance.getAvailableNotes()
 
-      setState((prev) => ({
-        ...prev,
-        isSyncing: false,
-        balance,
-        notes,
-      }))
+      setBalance(walletBalance)
+      setNotes(walletNotes)
 
       // Save updated state
       saveWalletState(walletInstance.exportState())
     } catch (err) {
-      setState((prev) => ({
-        ...prev,
-        isSyncing: false,
-        error: err instanceof Error ? err.message : 'Failed to sync',
-      }))
+      setError(err instanceof Error ? err.message : 'Failed to sync')
+    } finally {
+      setIsSyncing(false)
     }
   }, [walletInstance])
 
@@ -256,10 +368,10 @@ export function usePrivacyWallet() {
    */
   const canAffordTransfer = useCallback(
     (outputAmount: bigint): boolean => {
-      if (!state.balance) return false
-      return state.balance.available >= outputAmount
+      if (!balance) return false
+      return balance.available >= outputAmount
     },
-    [state.balance]
+    [balance]
   )
 
   /**
@@ -283,28 +395,11 @@ export function usePrivacyWallet() {
       walletInstance.markNoteSpent(commitment, txHash)
 
       const { saveWalletState } = await loadPrivacyWallet()
-      const balance = walletInstance.getBalance()
-      const notes = walletInstance.getAvailableNotes()
+      const walletBalance = walletInstance.getBalance()
+      const walletNotes = walletInstance.getAvailableNotes()
 
-      setState((prev) => ({ ...prev, balance, notes }))
-      saveWalletState(walletInstance.exportState())
-    },
-    [walletInstance]
-  )
-
-  /**
-   * Add a pending deposit
-   */
-  const addPendingDeposit = useCallback(
-    async (note: any, index: number, txHash: string) => {
-      if (!walletInstance) return
-
-      walletInstance.addPendingDeposit(note, index, txHash)
-
-      const { saveWalletState } = await loadPrivacyWallet()
-      const balance = walletInstance.getBalance()
-
-      setState((prev) => ({ ...prev, balance }))
+      setBalance(walletBalance)
+      setNotes(walletNotes)
       saveWalletState(walletInstance.exportState())
     },
     [walletInstance]
@@ -315,24 +410,32 @@ export function usePrivacyWallet() {
    */
   const lock = useCallback(() => {
     setWalletInstance(null)
-    setState({
-      isUnlocked: false,
-      isLoading: false,
-      isSyncing: false,
-      balance: null,
-      notes: [],
-      error: null,
-    })
+    setIsUnlocked(false)
+    setIsLoading(false)
+    setIsSyncing(false)
+    setBalance(null)
+    setNotes([])
+    setError(null)
   }, [])
 
   /**
-   * Clear all wallet data
+   * Clear all wallet data including signature
    */
   const clearWallet = useCallback(async () => {
     const { clearWalletState } = await loadPrivacyWallet()
     clearWalletState()
+    clearSignature()
+    setHasStoredSignature(false)
     lock()
   }, [lock])
+
+  /**
+   * Clear only the stored signature (used before manual connect to force new signature)
+   */
+  const clearStoredSignatureAction = useCallback(() => {
+    clearSignature()
+    setHasStoredSignature(false)
+  }, [])
 
   /**
    * Format balance for display
@@ -343,8 +446,6 @@ export function usePrivacyWallet() {
 
   /**
    * Check the freshness of a merkle root for proof validity
-   * @param root The merkle root to check (as bigint)
-   * @returns Freshness status with warnings
    */
   const checkRootFreshness = useCallback(
     async (root: bigint): Promise<RootFreshness | null> => {
@@ -354,7 +455,6 @@ export function usePrivacyWallet() {
         // Convert bigint to bytes32
         const rootBytes = pad(toHex(root), { size: 32 }) as `0x${string}`
 
-        // This would typically use useReadContract, but for flexibility we use a direct call
         const { createPublicClient, http } = await import('viem')
         const { base, baseSepolia } = await import('viem/chains')
 
@@ -411,7 +511,6 @@ export function usePrivacyWallet() {
 
   /**
    * Prepare a transfer with freshness check
-   * Returns the preparation data along with freshness status
    */
   const prepareTransferWithFreshnessCheck = useCallback(
     async (
@@ -434,21 +533,24 @@ export function usePrivacyWallet() {
     [prepareTransfer, checkRootFreshness]
   )
 
-  return {
+  const value: PrivacyWalletContextValue = {
     // State
     isConnected,
-    isUnlocked: state.isUnlocked,
-    isLoading: state.isLoading,
-    isSyncing: state.isSyncing,
-    balance: state.balance,
-    notes: state.notes,
-    error: state.error,
+    isUnlocked,
+    isLoading,
+    isSyncing,
+    isInitializing,
+    balance,
+    notes,
+    error,
+    hasStoredSignature,
 
     // Actions
     unlock,
     lock,
     sync,
     clearWallet,
+    clearStoredSignature: clearStoredSignatureAction,
     generateDeposit,
     prepareTransfer,
     prepareTransferWithFreshnessCheck,
@@ -456,11 +558,24 @@ export function usePrivacyWallet() {
     canAffordTransfer,
     getClaimCredentials,
     markNoteSpent,
-    addPendingDeposit,
     formatBalance,
     checkRootFreshness,
 
     // Constants
     FRESHNESS_THRESHOLDS,
   }
+
+  return (
+    <PrivacyWalletContext.Provider value={value}>
+      {children}
+    </PrivacyWalletContext.Provider>
+  )
+}
+
+export function usePrivacyWallet() {
+  const context = useContext(PrivacyWalletContext)
+  if (!context) {
+    throw new Error('usePrivacyWallet must be used within a PrivacyWalletProvider')
+  }
+  return context
 }

@@ -11,20 +11,21 @@ import {
   X,
   Loader2,
   Wallet,
-  Lock,
-  Unlock,
   RefreshCw,
   AlertCircle,
   CheckCircle,
+  Plus,
 } from 'lucide-react'
 import { ImageUpload } from './image-upload'
 import { EmbedInput } from './embed-input'
 import { EmbedPreview } from './embed-preview'
-import { usePrivacyWallet } from '@/hooks/use-privacy-wallet'
+import { DepositModal } from './deposit-modal'
+import { usePrivacyWallet } from '@/providers/privacy-wallet'
+import { useDeposit } from '@/hooks/use-deposit'
 
 const MAX_CHARS = 320
 
-type BidderState = 'idle' | 'unlocking' | 'generating_proof' | 'bidding' | 'success' | 'error'
+type BidderState = 'idle' | 'generating_proof' | 'bidding' | 'success' | 'error'
 
 function CircularProgress({ length, max }: { length: number; max: number }) {
   const progress = Math.min((length / max) * 100, 100)
@@ -74,18 +75,20 @@ export function AuctionBidder() {
   // Privacy wallet
   const {
     isUnlocked,
-    isLoading: walletLoading,
     isSyncing,
     balance,
     error: walletError,
-    unlock,
     sync,
     prepareTransfer,
     canAffordTransfer,
     getClaimCredentials,
     formatBalance,
     markNoteSpent,
+    generateDeposit,
   } = usePrivacyWallet()
+
+  // Token balance (for deposit)
+  const { tokenBalance, formatTokenAmount } = useDeposit()
 
   // Form state
   const [text, setText] = useState('')
@@ -95,6 +98,7 @@ export function AuctionBidder() {
   const [showImageUpload, setShowImageUpload] = useState(false)
   const [showEmbedInput, setShowEmbedInput] = useState(false)
   const [bidAmount, setBidAmount] = useState('')
+  const [showDepositModal, setShowDepositModal] = useState(false)
 
   // Bidding state
   const [state, setState] = useState<BidderState>('idle')
@@ -124,16 +128,6 @@ export function AuctionBidder() {
       textareaRef.current.style.height = Math.max(100, textareaRef.current.scrollHeight) + 'px'
     }
   }
-
-  const handleUnlock = useCallback(async () => {
-    setState('unlocking')
-    const success = await unlock()
-    setState(success ? 'idle' : 'error')
-    if (success) {
-      // Sync after unlock
-      await sync()
-    }
-  }, [unlock, sync])
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return
@@ -228,86 +222,76 @@ export function AuctionBidder() {
     setError(null)
   }, [])
 
-  // Not connected
-  if (!isConnected) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 p-6">
-          <Wallet className="h-12 w-12 text-muted-foreground" />
-          <p className="text-center text-muted-foreground">
-            Connect your wallet to participate in the auction
-          </p>
-        </CardContent>
-      </Card>
-    )
+  // Not connected or not unlocked - don't show bidder
+  if (!isConnected || !isUnlocked) {
+    return null
   }
 
-  // Wallet not unlocked
-  if (!isUnlocked) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 p-6">
-          <Lock className="h-12 w-12 text-muted-foreground" />
-          <div className="text-center">
-            <p className="font-semibold">Unlock Privacy Wallet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sign a message to access your anonymous bidding wallet.
-              Your notes are derived deterministically—no need to backup files.
-            </p>
-          </div>
-          {walletError && (
-            <p className="text-sm text-destructive">{walletError}</p>
-          )}
-          <Button
-            onClick={handleUnlock}
-            disabled={walletLoading || state === 'unlocking'}
-            className="cursor-pointer"
-          >
-            {walletLoading || state === 'unlocking' ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Unlocking...
-              </>
-            ) : (
-              <>
-                <Unlock className="mr-2 h-4 w-4" />
-                Unlock Wallet
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // No balance
+  // No available balance - show deposit options
   if (balance && balance.available === 0n) {
     return (
-      <Card className="border-yellow-500/30 bg-yellow-500/5">
-        <CardContent className="flex flex-col gap-4 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-yellow-500" />
-              <p className="font-semibold">No Available Balance</p>
+      <>
+        <Card>
+          <CardContent className="flex flex-col gap-4 p-4">
+            {/* Pool Balance */}
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Pool Balance</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-semibold">
+                  {formatBalance(balance.available)} $ANON
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={sync}
+                  disabled={isSyncing}
+                  className="h-6 w-6 cursor-pointer p-0"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={sync}
-              disabled={isSyncing}
-              className="cursor-pointer"
-            >
-              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Deposit $ANON into the privacy pool to start bidding anonymously.
-          </p>
-          <Button className="cursor-pointer" disabled>
-            Deposit $ANON (Coming Soon)
-          </Button>
-        </CardContent>
-      </Card>
+
+            {/* Deposit section */}
+            {tokenBalance && tokenBalance > 0n ? (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Wallet: <span className="font-mono font-semibold text-foreground">{formatTokenAmount(tokenBalance)} $ANON</span>
+                </p>
+                <Button
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() => setShowDepositModal(true)}
+                >
+                  Deposit
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                You need $ANON tokens to deposit. Get some on{' '}
+                <a
+                  href="https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Uniswap
+                </a>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <DepositModal
+          open={showDepositModal}
+          onOpenChange={setShowDepositModal}
+          onSuccess={() => setShowDepositModal(false)}
+          generateDeposit={generateDeposit}
+          sync={sync}
+        />
+      </>
     )
   }
 
@@ -315,7 +299,7 @@ export function AuctionBidder() {
   if (state === 'success') {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center gap-4 py-8">
+        <CardContent className="flex flex-col items-center gap-4 p-4">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <p className="text-lg font-semibold">Bid Submitted!</p>
           <p className="text-center text-sm text-muted-foreground">
@@ -339,19 +323,31 @@ export function AuctionBidder() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Available Balance</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="font-mono font-semibold">
               {balance ? formatBalance(balance.available) : '0'} $ANON
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={sync}
-              disabled={isSyncing}
-              className="h-6 w-6 cursor-pointer p-0"
-            >
-              <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDepositModal(true)}
+                disabled={!tokenBalance || tokenBalance === 0n}
+                className="h-6 cursor-pointer px-2 text-xs"
+                title="Deposit more $ANON"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={sync}
+                disabled={isSyncing}
+                className="h-6 w-6 cursor-pointer p-0"
+              >
+                <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -489,6 +485,15 @@ export function AuctionBidder() {
           </div>
         </div>
       </CardContent>
+
+      {/* Deposit Modal */}
+      <DepositModal
+        open={showDepositModal}
+        onOpenChange={setShowDepositModal}
+        onSuccess={() => setShowDepositModal(false)}
+        generateDeposit={generateDeposit}
+        sync={sync}
+      />
     </Card>
   )
 }

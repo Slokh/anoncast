@@ -1,6 +1,6 @@
 'use client'
 
-import { RootFreshness } from '@/hooks/use-privacy-wallet'
+import { RootFreshness } from '@/providers/privacy-wallet'
 
 type ProofFreshnessWarningProps = {
   freshness: RootFreshness | null

@@ -202,7 +202,15 @@ WARNING: Never sign this message on a phishing site.`
   /**
    * Scan the chain for all notes belonging to this wallet
    */
-  async syncFromChain(fromBlock: bigint = 0n): Promise<void> {
+  async syncFromChain(fromBlock?: bigint): Promise<void> {
+    // If no fromBlock specified, get a reasonable starting point
+    // For local forks, we only need recent blocks
+    if (fromBlock === undefined) {
+      const currentBlock = await this.client.getBlockNumber()
+      // Go back 10000 blocks max, or to block 0 if chain is shorter
+      fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n
+    }
+
     // Scan for Deposit events
     const depositLogs = await this.client.getLogs({
       address: this.contractAddress,

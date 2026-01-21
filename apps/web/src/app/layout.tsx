@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { WalletProvider } from '@/providers/wallet'
+import { PrivacyWalletProvider } from '@/providers/privacy-wallet'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -38,7 +39,9 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${GeistSans.className} antialiased`}>
         <WalletProvider>
-          {children}
+          <PrivacyWalletProvider>
+            {children}
+          </PrivacyWalletProvider>
         </WalletProvider>
       </body>
     </html>

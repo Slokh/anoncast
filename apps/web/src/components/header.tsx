@@ -1,10 +1,12 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { formatUnits } from 'viem'
 import { CONTRACTS, IS_TESTNET, NETWORK_NAME } from '@/config/chains'
+import { usePrivacyWallet } from '@/providers/privacy-wallet'
 
 const erc20Abi = [
   {
@@ -29,6 +31,13 @@ function formatBalance(balance: bigint): string {
 
 export function Header() {
   const { address, isConnected } = useAccount()
+  const { isUnlocked, isLoading: walletLoading, isInitializing, unlock, sync, clearStoredSignature } = usePrivacyWallet()
+
+  // Track if user initiated connect flow (to trigger unlock after wallet connects)
+  const [pendingUnlock, setPendingUnlock] = useState(false)
+
+  // Only show as "fully connected" when privacy wallet is unlocked
+  const isFullyConnected = isConnected && isUnlocked
 
   const { data: balance } = useReadContract({
     address: CONTRACTS.ANON_TOKEN,
@@ -39,6 +48,40 @@ export function Header() {
       enabled: !!address && !!CONTRACTS.ANON_TOKEN,
     },
   })
+
+  // Handle unlock after wallet connects
+  useEffect(() => {
+    if (pendingUnlock && isConnected && !isUnlocked && !walletLoading) {
+      setPendingUnlock(false)
+      unlock().then((success) => {
+        if (success) {
+          sync()
+        }
+      })
+    }
+  }, [pendingUnlock, isConnected, isUnlocked, walletLoading, unlock, sync])
+
+  // Handle connect button click
+  const handleConnectClick = useCallback(
+    (openConnectModal: () => void) => {
+      // Always clear stored signature on manual connect to force fresh signature
+      clearStoredSignature()
+
+      if (isConnected && !isUnlocked) {
+        // Wallet connected but not unlocked - trigger unlock directly
+        unlock().then((success) => {
+          if (success) {
+            sync()
+          }
+        })
+      } else if (!isConnected) {
+        // Not connected - open RainbowKit and set pending unlock
+        setPendingUnlock(true)
+        openConnectModal()
+      }
+    },
+    [isConnected, isUnlocked, unlock, sync, clearStoredSignature]
+  )
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
@@ -58,7 +101,7 @@ export function Header() {
 
         {/* Right: Wallet / Balance */}
         <div className="flex items-center gap-3">
-          {isConnected && balance !== undefined && (
+          {isFullyConnected && balance !== undefined && (
             <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
               <Image src="/anon.png" alt="ANON" width={16} height={16} className="rounded-full" />
               <span className="text-sm font-medium">{formatBalance(balance)}</span>
@@ -67,16 +110,32 @@ export function Header() {
 
           <ConnectButton.Custom>
             {({ account, chain, openConnectModal, openAccountModal, mounted }) => {
-              const connected = mounted && account && chain
+              // Only show as connected if privacy wallet is also unlocked
+              const connected = mounted && account && chain && isUnlocked
+
+              // Don't render anything while initializing
+              if (isInitializing) {
+                return null
+              }
 
               return (
                 <button
-                  onClick={connected ? openAccountModal : openConnectModal}
-                  className="cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                  onClick={() =>
+                    connected ? openAccountModal() : handleConnectClick(openConnectModal)
+                  }
+                  disabled={walletLoading}
+                  className="cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
                 >
-                  {connected
-                    ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
-                    : 'Connect'}
+                  {walletLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                      <span>Connecting</span>
+                    </span>
+                  ) : connected ? (
+                    `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+                  ) : (
+                    'Connect'
+                  )}
                 </button>
               )
             }}
