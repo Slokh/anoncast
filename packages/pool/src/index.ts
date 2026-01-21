@@ -23,6 +23,16 @@ export {
   type ParsedTransferData,
 } from './transfer'
 
+// Withdraw circuit and utilities
+export {
+  WithdrawVerifier,
+  addressToBigInt,
+  bigIntToAddress,
+  type WithdrawProofData,
+  type WithdrawInput,
+  type ParsedWithdrawData,
+} from './withdraw'
+
 // Privacy wallet for managing notes
 export {
   PrivacyWallet,
@@ -32,6 +42,7 @@ export {
   saveWalletState,
   loadWalletState,
   clearWalletState,
+  clearAllWalletData,
   type PrivacyWalletState,
   type NoteState,
   type WalletBalance,

@@ -203,15 +203,6 @@ export function WithdrawModal({
               </div>
             )}
 
-            {/* Coming soon notice */}
-            {!isProcessing && state !== 'error' && (
-              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-600">
-                <p className="font-medium">Coming Soon</p>
-                <p className="mt-1 text-xs">
-                  Withdrawal ZK proof generation is being implemented. This feature will be available soon.
-                </p>
-              </div>
-            )}
 
             {/* Error message */}
             {state === 'error' && error && (

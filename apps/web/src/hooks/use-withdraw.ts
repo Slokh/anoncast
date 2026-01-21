@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import {
   useAccount,
   useWriteContract,
-  usePublicClient,
 } from 'wagmi'
 import { formatUnits, pad, toHex } from 'viem'
 import { CONTRACTS, TOKEN_DECIMALS } from '@/config/chains'
@@ -25,16 +24,36 @@ export type WithdrawResult = {
   recipient: string
 }
 
+type Note = {
+  secret: bigint
+  nullifier: bigint
+  commitment: bigint
+  amount: bigint
+  leafIndex: number
+  timestamp?: number
+}
+
 type WithdrawPreparation = {
-  inputNote: {
-    secret: bigint
-    nullifier: bigint
-    commitment: bigint
-    amount: bigint
-    leafIndex: number
-  }
+  inputNote: Note
   merkleProof: { path: bigint[]; indices: number[]; root: bigint }
   nullifierHash: bigint
+}
+
+// Lazy-loaded verifier instance
+let withdrawVerifierPromise: Promise<any> | null = null
+
+async function getWithdrawVerifier() {
+  if (!withdrawVerifierPromise) {
+    withdrawVerifierPromise = (async () => {
+      const [{ WithdrawVerifier }, circuit, vkey] = await Promise.all([
+        import('@anon/pool'),
+        import('@anon/pool/circuits/withdraw/target/anon_withdraw.json'),
+        import('@anon/pool/circuits/withdraw/target/vk.json'),
+      ])
+      return new WithdrawVerifier(circuit.default || circuit, vkey.default || vkey)
+    })()
+  }
+  return withdrawVerifierPromise
 }
 
 export function useWithdraw() {
@@ -72,13 +91,35 @@ export function useWithdraw() {
           throw new Error('No available notes for this withdrawal amount')
         }
 
-        // Step 2: Generate proof (mock for now)
+        // Step 2: Generate ZK proof
         setState('generating_proof')
 
-        // In production, this would generate a real ZK proof
-        // For now, we create a placeholder proof
-        // The verifier contract determines if proofs are verified
-        const mockProof = new Uint8Array(64) // Placeholder proof bytes
+        console.log('Generating withdraw proof...')
+        const verifier = await getWithdrawVerifier()
+
+        // Convert address to bigint for the circuit
+        const recipientBigInt = BigInt(address)
+
+        // Use generateSolidityWithdrawProof which uses { keccak: true } for EVM compatibility
+        const proofData = await verifier.generateSolidityWithdrawProof({
+          note: preparation.inputNote,
+          merklePath: preparation.merkleProof.path,
+          merkleIndices: preparation.merkleProof.indices,
+          merkleRoot: preparation.merkleProof.root,
+          recipient: recipientBigInt,
+        })
+
+        console.log('Proof generated:', {
+          proofLength: proofData.proof.length,
+          publicInputs: proofData.publicInputs,
+        })
+
+        // Use raw proof bytes directly - Solidity verifier expects full 14080 bytes (440 * 32)
+        // Do NOT use splitHonkProof or strip any headers
+        const proofBytes = new Uint8Array(proofData.proof)
+
+        console.log('Proof length:', proofBytes.length, '(expected: 14080)')
+        console.log('First 64 bytes of proof:', Array.from(proofBytes.slice(0, 64)))
 
         // Convert values to bytes32
         const nullifierHashBytes = pad(toHex(preparation.nullifierHash), { size: 32 }) as `0x${string}`
@@ -87,27 +128,62 @@ export function useWithdraw() {
         // Step 3: Submit withdrawal transaction
         setState('withdrawing')
 
-        // Debug log the withdraw parameters
-        console.log('Withdraw params:', {
-          proof: toHex(mockProof),
+        console.log('Submitting withdraw transaction:', {
+          proofHex: toHex(proofBytes).slice(0, 66) + '...',
           nullifierHash: nullifierHashBytes,
           root: rootBytes,
           amount: amount.toString(),
           recipient: address,
         })
 
-        const withdrawTxHash = await writeContractAsync({
-          address: CONTRACTS.POOL,
-          abi: ANON_POOL_ABI,
-          functionName: 'withdraw',
-          args: [
-            toHex(mockProof),
-            nullifierHashBytes,
-            rootBytes,
-            amount,
-            address,
-          ],
+        // Debug: Check if the merkle root is known on-chain
+        console.log('Checking if merkle root is known on-chain...')
+        const { createPublicClient, http } = await import('viem')
+        const debugClient = createPublicClient({
+          transport: http('http://127.0.0.1:8545'),
         })
+
+        const isKnown = await debugClient.readContract({
+          address: CONTRACTS.POOL,
+          abi: [{ name: 'isKnownRoot', type: 'function', stateMutability: 'view', inputs: [{ name: 'root', type: 'bytes32' }], outputs: [{ name: '', type: 'bool' }] }],
+          functionName: 'isKnownRoot',
+          args: [rootBytes],
+        })
+        console.log('Is merkle root known?', isKnown)
+
+        const lastRoot = await debugClient.readContract({
+          address: CONTRACTS.POOL,
+          abi: [{ name: 'getLastRoot', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'bytes32' }] }],
+          functionName: 'getLastRoot',
+        })
+        console.log('Last root on-chain:', lastRoot)
+
+        console.log('Contract address:', CONTRACTS.POOL)
+        console.log('About to call writeContractAsync...')
+
+        let withdrawTxHash: string
+        try {
+          const txArgs = {
+            address: CONTRACTS.POOL,
+            abi: ANON_POOL_ABI,
+            functionName: 'withdraw' as const,
+            args: [
+              toHex(proofBytes),
+              nullifierHashBytes,
+              rootBytes,
+              amount,
+              address,
+            ] as const,
+          }
+          console.log('TX args prepared:', txArgs.functionName, txArgs.address)
+
+          withdrawTxHash = await writeContractAsync(txArgs)
+        } catch (txError) {
+          console.error('writeContractAsync failed:', txError)
+          throw txError
+        }
+
+        console.log('Transaction submitted:', withdrawTxHash)
 
         setState('waiting_withdraw')
 
@@ -133,10 +209,14 @@ export function useWithdraw() {
 
         // Provide clearer error messages for common issues
         // 0x9dd854d3 is the selector for InvalidProof()
-        if (errorMessage.includes('InvalidProof') || errorMessage.includes('0x9dd854d3') || errorMessage.includes('execution reverted')) {
-          setError('Withdrawal proof generation is not yet implemented. This feature is coming soon.')
-        } else if (errorMessage.includes('gas')) {
-          setError('Transaction failed: Gas estimation error. The contract may have rejected the transaction.')
+        if (errorMessage.includes('InvalidProof') || errorMessage.includes('0x9dd854d3')) {
+          setError('Invalid proof - the withdrawal proof was rejected by the contract.')
+        } else if (errorMessage.includes('NullifierAlreadySpent') || errorMessage.includes('0x')) {
+          setError('This note has already been spent.')
+        } else if (errorMessage.includes('InvalidMerkleRoot')) {
+          setError('The merkle root has expired. Please refresh and try again.')
+        } else if (errorMessage.includes('execution reverted')) {
+          setError('Transaction reverted: ' + errorMessage)
         } else {
           setError(errorMessage)
         }

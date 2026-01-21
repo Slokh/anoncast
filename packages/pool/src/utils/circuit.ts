@@ -58,8 +58,13 @@ export abstract class Circuit {
     return result
   }
 
+  /**
+   * Generate a proof using bb.js
+   * @param input - Circuit inputs
+   * @param options - Optional settings { keccak: boolean } - use keccak for EVM-compatible proofs
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async generate(input: any) {
+  async generate(input: any, options?: { keccak?: boolean }) {
     const { Noir, UltraHonkBackend } = await this.initProver()
 
     const backend = new UltraHonkBackend(this.circuit.bytecode)
@@ -67,7 +72,8 @@ export abstract class Circuit {
 
     const { witness } = await noir.execute(input)
 
-    return await backend.generateProof(witness)
+    // bb.js 0.82.2 supports keccak option for EVM-compatible proofs
+    return await backend.generateProof(witness, options)
   }
 
   abstract parseData(publicInputs: string[]): unknown

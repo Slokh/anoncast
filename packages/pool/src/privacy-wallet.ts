@@ -454,30 +454,6 @@ WARNING: Never sign this message on a phishing site.`
   }
 
   /**
-   * Add a pending deposit note
-   */
-  addPendingDeposit(
-    note: Omit<Note, 'leafIndex' | 'timestamp'>,
-    index: number,
-    txHash: string
-  ): void {
-    const key = `0x${note.commitment.toString(16).padStart(64, '0')}`
-    this.notes.set(key, {
-      index,
-      note: {
-        secret: note.secret.toString(),
-        nullifier: note.nullifier.toString(),
-        commitment: note.commitment.toString(),
-        amount: note.amount.toString(),
-        leafIndex: -1, // Unknown until confirmed
-        timestamp: Date.now(),
-      },
-      status: 'pending',
-      depositTxHash: txHash,
-    })
-  }
-
-  /**
    * Export wallet state for backup (encrypted externally if needed)
    */
   exportState(): PrivacyWalletState {
@@ -505,10 +481,8 @@ WARNING: Never sign this message on a phishing site.`
 
 // ============ React Hook Helper ============
 
-/**
- * Storage key for wallet state
- */
 const WALLET_STATE_KEY = 'anon_pool_wallet'
+const SIGNATURE_KEY = 'anon_pool_signature'
 
 /**
  * Save wallet state to localStorage
@@ -535,4 +509,24 @@ export function loadWalletState(): PrivacyWalletState | null {
  */
 export function clearWalletState(): void {
   localStorage.removeItem(WALLET_STATE_KEY)
+}
+
+/**
+ * Clear ALL anon pool related data from localStorage
+ * Use this for dev mode reset button
+ */
+export function clearAllWalletData(): void {
+  localStorage.removeItem(WALLET_STATE_KEY)
+  localStorage.removeItem(SIGNATURE_KEY)
+  // Also clean up any legacy keys with contract addresses
+  const keysToRemove: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith('anon_pool_')) {
+      keysToRemove.push(key)
+    }
+  }
+  for (const key of keysToRemove) {
+    localStorage.removeItem(key)
+  }
 }

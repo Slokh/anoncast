@@ -36,8 +36,18 @@ check_dependency "anvil"
 check_dependency "forge"
 check_dependency "cast"
 check_dependency "bun"
+check_dependency "nargo"
+check_dependency "bb"
 echo -e "${GREEN}✓ All dependencies found${NC}"
 echo ""
+
+# Regenerate verifiers to ensure vkey sync between client and contracts
+echo "Regenerating ZK verifiers..."
+cd "$ROOT_DIR/packages/pool"
+./scripts/generate-verifiers.sh 2>&1 | grep -E "(Processing|Generated|✓)" || true
+echo -e "${GREEN}✓ Verifiers regenerated${NC}"
+echo ""
+cd "$ROOT_DIR"
 
 # Parse arguments
 FORK_URL="$DEFAULT_FORK_URL"

@@ -2,7 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-solc = "0.8.24"
+solc = "0.8.27"
 # Disable via_ir to allow large auto-generated verifier contracts to compile
 # The verifiers use inline assembly that causes Yul stack layout issues with via_ir
 via_ir = false

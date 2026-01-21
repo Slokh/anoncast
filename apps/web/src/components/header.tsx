@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { ArrowRight, Loader2, Shield, Eye } from 'lucide-react'
+import { ArrowRight, Loader2, Shield, Eye, Trash2 } from 'lucide-react'
 import { IS_TESTNET, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
@@ -23,6 +23,7 @@ export function Header() {
     unlock,
     sync,
     clearStoredSignature,
+    clearAllData,
     formatBalance,
     generateDeposit,
     prepareWithdraw,
@@ -87,8 +88,21 @@ export function Header() {
     <>
       {/* Testnet Banner */}
       {IS_TESTNET && (
-        <div className="bg-yellow-500/20 px-4 py-1 text-center text-xs font-medium text-yellow-600">
-          {NETWORK_NAME} Testnet
+        <div className="flex items-center justify-between bg-yellow-500/20 px-4 py-1 text-xs font-medium text-yellow-600">
+          <span>{NETWORK_NAME} Testnet</span>
+          <button
+            onClick={() => {
+              if (confirm('Clear all wallet data from localStorage? You will need to reconnect and any unsynced notes may be lost.')) {
+                clearAllData()
+                window.location.reload()
+              }
+            }}
+            className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
+            title="Clear localStorage"
+          >
+            <Trash2 className="h-3 w-3" />
+            <span>Reset</span>
+          </button>
         </div>
       )}
 

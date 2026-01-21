@@ -8,19 +8,24 @@
   "exports": {
     ".": "./src/index.ts",
     "./transfer": "./src/transfer.ts",
-    "./privacy-wallet": "./src/privacy-wallet.ts"
+    "./withdraw": "./src/withdraw.ts",
+    "./privacy-wallet": "./src/privacy-wallet.ts",
+    "./circuits/withdraw/target/anon_withdraw.json": "./src/circuits/withdraw/target/anon_withdraw.json",
+    "./circuits/withdraw/target/vk.json": "./src/circuits/withdraw/target/vk.json",
+    "./circuits/transfer/target/anon_transfer.json": "./src/circuits/transfer/target/anon_transfer.json",
+    "./circuits/transfer/target/vk.json": "./src/circuits/transfer/target/vk.json"
   },
   "scripts": {
     "build": "npm run build:transfer && npm run build:withdraw",
-    "build:transfer": "cd src/circuits/transfer && nargo compile && bb write_vk -b target/anon_transfer.json -o target/vkey",
-    "build:withdraw": "cd src/circuits/withdraw && nargo compile && bb write_vk -b target/anon_withdraw.json -o target/vkey",
+    "build:transfer": "cd src/circuits/transfer && nargo compile && bb write_vk_ultra_honk -b target/anon_transfer.json -o target/vk --oracle_hash keccak && node -e \"const fs=require('fs');fs.writeFileSync('target/vk.json',JSON.stringify(Array.from(fs.readFileSync('target/vk'))))\"",
+    "build:withdraw": "cd src/circuits/withdraw && nargo compile && bb write_vk_ultra_honk -b target/anon_withdraw.json -o target/vk --oracle_hash keccak && node -e \"const fs=require('fs');fs.writeFileSync('target/vk.json',JSON.stringify(Array.from(fs.readFileSync('target/vk'))))\"",
     "generate:verifiers": "./scripts/generate-verifiers.sh",
     "test": "bun test",
     "test:circuit": "cd src/circuits/transfer && nargo test && cd ../withdraw && nargo test"
   },
   "dependencies": {
-    "@aztec/bb.js": "^0.61.0",
-    "@noir-lang/noir_js": "^0.38.0",
+    "@aztec/bb.js": "0.82.2",
+    "@noir-lang/noir_js": "1.0.0-beta.3",
     "viem": "^2.21.55"
   },
   "devDependencies": {

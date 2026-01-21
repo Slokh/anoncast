@@ -88,6 +88,7 @@ type PrivacyWalletContextValue = {
   sync: () => Promise<void>
   clearWallet: () => Promise<void>
   clearStoredSignature: () => void
+  clearAllData: () => void
   generateDeposit: (amount: bigint) => { commitment: bigint; note: any } | null
   prepareTransfer: (outputAmount: bigint, outputCommitment: bigint) => Promise<TransferPreparation | null>
   prepareTransferWithFreshnessCheck: (outputAmount: bigint, outputCommitment: bigint) => Promise<{
@@ -216,7 +217,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      const { PrivacyWallet, saveWalletState, loadWalletState } = await loadPrivacyWallet()
+      const { PrivacyWallet, loadWalletState } = await loadPrivacyWallet()
 
       // Create wallet from signature
       const wallet = PrivacyWallet.fromSignature(signature, POOL_CONTRACT, RPC_URL)
@@ -481,6 +482,16 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
   }, [lock])
 
   /**
+   * Clear ALL anon pool data from localStorage (dev mode reset)
+   */
+  const clearAllData = useCallback(async () => {
+    const { clearAllWalletData } = await loadPrivacyWallet()
+    clearAllWalletData()
+    setHasStoredSignature(false)
+    lock()
+  }, [lock])
+
+  /**
    * Clear only the stored signature (used before manual connect to force new signature)
    */
   const clearStoredSignatureAction = useCallback(() => {
@@ -602,6 +613,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
     sync,
     clearWallet,
     clearStoredSignature: clearStoredSignatureAction,
+    clearAllData,
     generateDeposit,
     prepareTransfer,
     prepareTransferWithFreshnessCheck,
