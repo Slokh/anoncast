@@ -2,52 +2,56 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { useAccount, useReadContract } from 'wagmi'
+import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { formatUnits } from 'viem'
-import { CONTRACTS, IS_TESTNET, NETWORK_NAME } from '@/config/chains'
+import { ArrowRight, Loader2, Shield, Eye } from 'lucide-react'
+import { IS_TESTNET, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
-
-const erc20Abi = [
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-] as const
-
-function formatBalance(balance: bigint): string {
-  const formatted = Number(formatUnits(balance, 18))
-  if (formatted >= 1_000_000) {
-    return (formatted / 1_000_000).toFixed(2) + 'M'
-  }
-  if (formatted >= 1_000) {
-    return (formatted / 1_000).toFixed(1) + 'K'
-  }
-  return formatted.toFixed(0)
-}
+import { useDeposit } from '@/hooks/use-deposit'
+import { DepositModal } from './auction/deposit-modal'
+import { WithdrawModal } from './auction/withdraw-modal'
 
 export function Header() {
-  const { address, isConnected } = useAccount()
-  const { isUnlocked, isLoading: walletLoading, isInitializing, unlock, sync, clearStoredSignature } = usePrivacyWallet()
+  const { isConnected } = useAccount()
+  const {
+    isUnlocked,
+    isLoading: walletLoading,
+    isInitializing,
+    isSyncing,
+    balance,
+    notes,
+    unlock,
+    sync,
+    clearStoredSignature,
+    formatBalance,
+    generateDeposit,
+    prepareWithdraw,
+    markNoteSpent,
+  } = usePrivacyWallet()
 
-  // Track if user initiated connect flow (to trigger unlock after wallet connects)
+  const { tokenBalance, formatTokenAmount, refetchBalance } = useDeposit()
+  const [showDepositModal, setShowDepositModal] = useState(false)
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [pendingUnlock, setPendingUnlock] = useState(false)
 
-  // Only show as "fully connected" when privacy wallet is unlocked
   const isFullyConnected = isConnected && isUnlocked
+  const walletBal = tokenBalance ?? 0n
+  const poolBal = balance?.available ?? 0n
 
-  const { data: balance } = useReadContract({
-    address: CONTRACTS.ANON_TOKEN,
-    abi: erc20Abi,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && !!CONTRACTS.ANON_TOKEN,
-    },
-  })
+  // Auto-sync on mount and periodically
+  useEffect(() => {
+    if (!isUnlocked) return
+
+    sync()
+    refetchBalance()
+
+    const interval = setInterval(() => {
+      sync()
+      refetchBalance()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [isUnlocked, sync, refetchBalance])
 
   // Handle unlock after wallet connects
   useEffect(() => {
@@ -61,21 +65,17 @@ export function Header() {
     }
   }, [pendingUnlock, isConnected, isUnlocked, walletLoading, unlock, sync])
 
-  // Handle connect button click
   const handleConnectClick = useCallback(
     (openConnectModal: () => void) => {
-      // Always clear stored signature on manual connect to force fresh signature
       clearStoredSignature()
 
       if (isConnected && !isUnlocked) {
-        // Wallet connected but not unlocked - trigger unlock directly
         unlock().then((success) => {
           if (success) {
             sync()
           }
         })
       } else if (!isConnected) {
-        // Not connected - open RainbowKit and set pending unlock
         setPendingUnlock(true)
         openConnectModal()
       }
@@ -84,7 +84,7 @@ export function Header() {
   )
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+    <>
       {/* Testnet Banner */}
       {IS_TESTNET && (
         <div className="bg-yellow-500/20 px-4 py-1 text-center text-xs font-medium text-yellow-600">
@@ -92,56 +92,171 @@ export function Header() {
         </div>
       )}
 
-      <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
-        {/* Left: Logo */}
-        <div className="flex items-center gap-2">
-          <Image src="/anon.png" alt="Anon" width={28} height={28} className="rounded-full" />
-          <span className="text-sm font-semibold">ANON</span>
-        </div>
+      <div className="mx-auto w-full max-w-lg px-4 pt-4">
+        {/* Main Header Card */}
+        <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-muted/50 shadow-xl">
+          {/* Top Row: Logo + Connect */}
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Image src="/anon.png" alt="Anon" width={36} height={36} className="rounded-full" />
+                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg font-bold tracking-tight">ANON</span>
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href="https://x.com/anoncast_"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+                    >
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                    </a>
+                    <a
+                      href="https://warpcast.com/anoncast"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+                    >
+                      <svg className="h-3 w-3" viewBox="0 0 1000 1000" fill="currentColor">
+                        <path d="M257.778 155.556H742.222V844.444H671.111V528.889H670.414C662.554 441.677 589.258 373.333 500 373.333C410.742 373.333 337.446 441.677 329.586 528.889H328.889V844.444H257.778V155.556Z" />
+                        <path d="M128.889 253.333L157.778 351.111H182.222V746.667C169.949 746.667 160 756.616 160 768.889V795.556H155.556C143.283 795.556 133.333 805.505 133.333 817.778V844.444H382.222V817.778C382.222 805.505 372.273 795.556 360 795.556H355.556V768.889C355.556 756.616 345.606 746.667 333.333 746.667H306.667V253.333H128.889Z" />
+                        <path d="M675.556 746.667C663.283 746.667 653.333 756.616 653.333 768.889V795.556H648.889C636.616 795.556 626.667 805.505 626.667 817.778V844.444H875.556V817.778C875.556 805.505 865.606 795.556 853.333 795.556H848.889V768.889C848.889 756.616 838.94 746.667 826.667 746.667V351.111H851.111L880 253.333H702.222V746.667H675.556Z" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Post anonymously</p>
+              </div>
+            </div>
 
-        {/* Right: Wallet / Balance */}
-        <div className="flex items-center gap-3">
-          {isFullyConnected && balance !== undefined && (
-            <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
-              <Image src="/anon.png" alt="ANON" width={16} height={16} className="rounded-full" />
-              <span className="text-sm font-medium">{formatBalance(balance)}</span>
+            <ConnectButton.Custom>
+              {({ account, chain, openConnectModal, openAccountModal, mounted }) => {
+                const connected = mounted && account && chain && isUnlocked
+
+                if (isInitializing) {
+                  return null
+                }
+
+                return (
+                  <button
+                    onClick={() =>
+                      connected ? openAccountModal() : handleConnectClick(openConnectModal)
+                    }
+                    disabled={walletLoading}
+                    className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {walletLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                        <span>Connecting</span>
+                      </span>
+                    ) : connected ? (
+                      `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+                    ) : (
+                      'Connect'
+                    )}
+                  </button>
+                )
+              }}
+            </ConnectButton.Custom>
+          </div>
+
+          {/* Balance HUD - only show when connected */}
+          {isFullyConnected && (
+            <div className="border-t border-border/50 bg-black/20 px-3 py-2">
+              <div className="flex items-stretch gap-1.5">
+                {/* Public Balance */}
+                <div className="flex-1 overflow-hidden rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="h-3 w-3 text-yellow-500" />
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Public</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-sm font-bold tabular-nums">
+                        {formatTokenAmount(walletBal)}
+                      </span>
+                      {isSyncing && (
+                        <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDepositModal(true)}
+                    disabled={walletBal === 0n}
+                    className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ArrowRight className="h-3 w-3" />
+                    Deposit
+                  </button>
+                </div>
+
+                {/* Private Balance */}
+                <div className="flex-1 overflow-hidden rounded-lg bg-primary/10 ring-1 ring-primary/30">
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] uppercase tracking-wider text-primary/70">Private</span>
+                    </div>
+                    <span className="font-mono text-sm font-bold tabular-nums text-primary">
+                      {formatBalance(poolBal)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowWithdrawModal(true)}
+                    disabled={poolBal === 0n}
+                    className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ArrowRight className="h-3 w-3 rotate-180" />
+                    Withdraw
+                  </button>
+                </div>
+              </div>
+
+              {/* Get tokens hint */}
+              {walletBal === 0n && poolBal === 0n && (
+                <div className="mt-3 rounded-lg bg-white/5 p-2 text-center text-xs text-muted-foreground">
+                  Get $ANON on{' '}
+                  <a
+                    href="https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    Uniswap
+                  </a>{' '}
+                  to get started
+                </div>
+              )}
             </div>
           )}
-
-          <ConnectButton.Custom>
-            {({ account, chain, openConnectModal, openAccountModal, mounted }) => {
-              // Only show as connected if privacy wallet is also unlocked
-              const connected = mounted && account && chain && isUnlocked
-
-              // Don't render anything while initializing
-              if (isInitializing) {
-                return null
-              }
-
-              return (
-                <button
-                  onClick={() =>
-                    connected ? openAccountModal() : handleConnectClick(openConnectModal)
-                  }
-                  disabled={walletLoading}
-                  className="cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
-                >
-                  {walletLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                      <span>Connecting</span>
-                    </span>
-                  ) : connected ? (
-                    `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
-                  ) : (
-                    'Connect'
-                  )}
-                </button>
-              )
-            }}
-          </ConnectButton.Custom>
         </div>
       </div>
-    </header>
+
+      <DepositModal
+        open={showDepositModal}
+        onOpenChange={setShowDepositModal}
+        onSuccess={() => setShowDepositModal(false)}
+        generateDeposit={generateDeposit}
+        sync={sync}
+      />
+
+      <WithdrawModal
+        open={showWithdrawModal}
+        onOpenChange={setShowWithdrawModal}
+        onSuccess={() => setShowWithdrawModal(false)}
+        privateBalance={poolBal}
+        notes={notes}
+        prepareWithdraw={prepareWithdraw}
+        markNoteSpent={markNoteSpent}
+        sync={sync}
+        formatBalance={formatBalance}
+      />
+    </>
   )
 }

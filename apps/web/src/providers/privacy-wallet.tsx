@@ -64,6 +64,12 @@ type TransferPreparation = {
   nullifierHash: bigint
 }
 
+type WithdrawPreparation = {
+  inputNote: Note
+  merkleProof: { path: bigint[]; indices: number[]; root: bigint }
+  nullifierHash: bigint
+}
+
 type PrivacyWalletContextValue = {
   // State
   isConnected: boolean
@@ -88,7 +94,9 @@ type PrivacyWalletContextValue = {
     preparation: TransferPreparation | null
     freshness: RootFreshness | null
   }>
+  prepareWithdraw: (amount: bigint) => Promise<WithdrawPreparation | null>
   findNoteForTransfer: (outputAmount: bigint) => Note | null
+  findNoteForWithdraw: (amount: bigint) => Note | null
   canAffordTransfer: (outputAmount: bigint) => boolean
   getClaimCredentials: (slotId: number) => { claimSecret: bigint; claimCommitment: bigint } | null
   markNoteSpent: (commitment: bigint, txHash: string) => Promise<void>
@@ -364,6 +372,49 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
   )
 
   /**
+   * Find a note that exactly matches the withdrawal amount
+   */
+  const findNoteForWithdraw = useCallback(
+    (amount: bigint): Note | null => {
+      if (!walletInstance) return null
+      const available = walletInstance.getAvailableNotes()
+      // For withdrawals, we need an exact match or a larger note
+      return available.find((note: Note) => note.amount >= amount) || null
+    },
+    [walletInstance]
+  )
+
+  /**
+   * Prepare a withdrawal (full note withdrawal, no change)
+   */
+  const prepareWithdraw = useCallback(
+    async (amount: bigint): Promise<WithdrawPreparation | null> => {
+      if (!walletInstance) return null
+
+      // Find a note to spend - for withdrawals we need an exact amount match
+      // or we withdraw the full note amount
+      const inputNote = walletInstance.findNoteForTransfer(amount)
+      if (!inputNote) {
+        return null
+      }
+
+      // Get merkle proof
+      const merkleProof = walletInstance.getMerkleProof(inputNote.leafIndex)
+
+      // Compute nullifier hash
+      const { computeNullifierHash } = await import('@anon/pool/transfer')
+      const nullifierHash = computeNullifierHash(inputNote.nullifier)
+
+      return {
+        inputNote,
+        merkleProof,
+        nullifierHash,
+      }
+    },
+    [walletInstance]
+  )
+
+  /**
    * Check if we can afford a transfer
    */
   const canAffordTransfer = useCallback(
@@ -554,7 +605,9 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
     generateDeposit,
     prepareTransfer,
     prepareTransferWithFreshnessCheck,
+    prepareWithdraw,
     findNoteForTransfer,
+    findNoteForWithdraw,
     canAffordTransfer,
     getClaimCredentials,
     markNoteSpent,

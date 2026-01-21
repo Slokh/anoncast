@@ -1,2 +1,2 @@
 export { AuctionTimer } from './auction-timer'
-export { AuctionBidder } from './auction-bidder'
+export { PostForm } from './post-form'

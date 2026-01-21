@@ -115,6 +115,36 @@ CHAIN_ID=$(cast chain-id --rpc-url http://127.0.0.1:8545)
 echo -e "${GREEN}✓ Anvil running (Chain ID: $CHAIN_ID, PID: $ANVIL_PID)${NC}"
 echo ""
 
+# Fund test accounts with $ANON tokens
+echo "Funding test accounts with \$ANON tokens..."
+
+# Known whale address holding $ANON
+WHALE_ADDRESS="0x8117efF53BA83D42408570c69C6da85a2Bb6CA05"
+TEST_ACCOUNT="0x333601a803CAc32B7D17A38d32c9728A93b422f4"
+TRANSFER_AMOUNT="1000000000000000000000" # 1,000 ANON (18 decimals)
+
+# Check whale balance first
+WHALE_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $WHALE_ADDRESS --rpc-url http://127.0.0.1:8545 2>/dev/null || echo "0")
+echo "  Whale balance: $WHALE_BALANCE"
+
+if [ "$WHALE_BALANCE" != "0" ]; then
+    # Transfer tokens from whale to test account using impersonation
+    cast send $ANON_TOKEN "transfer(address,uint256)(bool)" $TEST_ACCOUNT $TRANSFER_AMOUNT \
+        --from $WHALE_ADDRESS \
+        --unlocked \
+        --rpc-url http://127.0.0.1:8545 \
+        &> /dev/null
+
+    # Verify transfer
+    TEST_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $TEST_ACCOUNT --rpc-url http://127.0.0.1:8545)
+    echo -e "${GREEN}✓ Transferred 1,000 \$ANON to test account${NC}"
+    echo "  Test account balance: $TEST_BALANCE"
+else
+    echo -e "${YELLOW}⚠ Could not fund test account (whale has no balance)${NC}"
+    echo "  You may need to find a different whale address"
+fi
+echo ""
+
 # Deploy contracts
 echo "Deploying contracts..."
 cd "$CONTRACTS_DIR"
@@ -177,10 +207,16 @@ echo "  RPC URL:  http://127.0.0.1:8545"
 echo "  Chain ID: $CHAIN_ID"
 echo "  PID:      $ANVIL_PID"
 echo ""
-echo -e "${BLUE}Test Account (Account #0):${NC}"
+echo -e "${BLUE}Funded Account:${NC}"
+echo "  Address:  $TEST_ACCOUNT"
+FINAL_ANON_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $TEST_ACCOUNT --rpc-url http://127.0.0.1:8545 2>/dev/null || echo "0")
+FORMATTED_BALANCE=$(echo "scale=0; $FINAL_ANON_BALANCE / 1000000000000000000" | bc 2>/dev/null || echo "unknown")
+echo "  \$ANON:    $FORMATTED_BALANCE tokens"
+echo ""
+echo -e "${BLUE}Anvil Test Account (Account #0):${NC}"
 echo "  Address:  0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 echo "  Key:      0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-echo "  Balance:  1,000,000 TEST tokens + 10,000 ETH"
+echo "  ETH:      10,000 ETH"
 echo ""
 
 echo -e "${YELLOW}To start the frontend:${NC}"
