@@ -1,0 +1,29 @@
+{
+  "name": "@anon/pool",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./transfer": "./src/transfer.ts",
+    "./privacy-wallet": "./src/privacy-wallet.ts"
+  },
+  "scripts": {
+    "build": "npm run build:transfer && npm run build:withdraw",
+    "build:transfer": "cd src/circuits/transfer && nargo compile && bb write_vk -b target/anon_transfer.json -o target/vkey",
+    "build:withdraw": "cd src/circuits/withdraw && nargo compile && bb write_vk -b target/anon_withdraw.json -o target/vkey",
+    "generate:verifiers": "./scripts/generate-verifiers.sh",
+    "test": "bun test",
+    "test:circuit": "cd src/circuits/transfer && nargo test && cd ../withdraw && nargo test"
+  },
+  "dependencies": {
+    "@aztec/bb.js": "^0.61.0",
+    "@noir-lang/noir_js": "^0.38.0",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

@@ -1,0 +1,13 @@
+change_amount = ""
+change_commitment = ""
+change_nullifier = ""
+change_secret = ""
+input_amount = ""
+merkle_indices = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+merkle_path = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+merkle_root = ""
+nullifier = ""
+nullifier_hash = ""
+output_amount = ""
+output_commitment = ""
+secret = ""

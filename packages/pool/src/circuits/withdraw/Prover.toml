@@ -1,0 +1,9 @@
+amount = ""
+merkle_indices = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+merkle_path = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+merkle_root = ""
+nullifier = ""
+nullifier_hash = ""
+recipient = ""
+secret = ""
+withdraw_amount = ""

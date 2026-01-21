@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@anon/credentials"],
+  transpilePackages: ["@anon/pool"],
   serverExternalPackages: ["@aztec/bb.js"],
   experimental: {
     serverActions: {

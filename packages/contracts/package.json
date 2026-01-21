@@ -1,0 +1,12 @@
+{
+  "name": "@anon/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "forge build --skip '*/TransferVerifier.sol' --skip '*/WithdrawVerifier.sol'",
+    "build:all": "FOUNDRY_PROFILE=verifiers forge build",
+    "test": "forge test --skip '*/TransferVerifier.sol' --skip '*/WithdrawVerifier.sol'",
+    "deploy:testnet": "forge script script/Deploy.s.sol:DeployTestnet --rpc-url base_sepolia --broadcast --verify",
+    "deploy:mainnet": "forge script script/Deploy.s.sol:DeployMainnet --rpc-url base --broadcast --verify"
+  }
+}

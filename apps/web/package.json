@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:testnet": "NEXT_PUBLIC_TESTNET=true next dev",
     "build": "next build",
+    "build:testnet": "NEXT_PUBLIC_TESTNET=true next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@anon/credentials": "workspace:*",
+    "@anon/pool": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",

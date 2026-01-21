@@ -4,10 +4,15 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "bun run --filter @anon/web dev",
+    "dev:testnet": "bun run --filter @anon/web dev:testnet",
     "build": "bun run --filter @anon/web build",
+    "build:testnet": "bun run --filter @anon/web build:testnet",
     "lint": "bun run --filter '*' lint",
     "test:e2e": "bun run --env-file=packages/credentials/.env scripts/e2e-test.ts",
-    "cast:delete": "bun run --env-file=packages/credentials/.env scripts/delete-cast.ts"
+    "cast:delete": "bun run --env-file=packages/credentials/.env scripts/delete-cast.ts",
+    "contracts:build": "cd packages/contracts && forge build",
+    "contracts:test": "cd packages/contracts && forge test",
+    "contracts:deploy:testnet": "cd packages/contracts && ./script/deploy-testnet.sh"
   },
   "dependencies": {
     "viem": "^2.21.55"

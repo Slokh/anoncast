@@ -1,0 +1,8 @@
+[package]
+name = "anon_transfer"
+type = "bin"
+authors = ["anon"]
+compiler_version = ">=0.38.0"
+version = "0.1.0"
+
+[dependencies]

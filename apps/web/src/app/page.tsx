@@ -1,6 +1,6 @@
 import { Header } from '@/components/header'
-import { HolderRequirements } from '@/components/holder-requirements'
-import { PostComposer } from '@/components/post/composer'
+import { AuctionTimer } from '@/components/auction/auction-timer'
+import { AuctionBidder } from '@/components/auction/auction-bidder'
 
 export default function Home() {
   return (
@@ -8,18 +8,35 @@ export default function Home() {
       <Header />
 
       <main className="mx-auto w-full max-w-lg px-4 py-8">
-        <PostComposer />
+        <div className="space-y-4">
+          <AuctionTimer />
+          <AuctionBidder />
+        </div>
 
         <div className="mt-6 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-lg font-semibold">Post anonymously</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Posts are made anonymous using zk proofs. Due to the complex calculations
-            required, it could take up to a few minutes. Do not post porn, doxes, shills,
-            or threats. This is not about censorship resistance - it&apos;s about great
-            anonymous posts.
-          </p>
-
-          <HolderRequirements />
+          <h2 className="text-lg font-semibold">How it works</h2>
+          <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+            <li className="flex gap-2">
+              <span className="font-mono text-primary">1.</span>
+              <span>Deposit $ANON into the privacy pool</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-mono text-primary">2.</span>
+              <span>Place bids with your post—completely anonymous</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-mono text-primary">3.</span>
+              <span>Highest bid at XX:00 wins the slot</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-mono text-primary">4.</span>
+              <span>Winner&apos;s post published to Farcaster &amp; X</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-mono text-primary">5.</span>
+              <span>100% of bid goes to previous winner</span>
+            </li>
+          </ul>
 
           <div className="mt-4 flex gap-4 text-sm">
             <a

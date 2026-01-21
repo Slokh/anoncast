@@ -4,8 +4,7 @@ import Image from 'next/image'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { formatUnits } from 'viem'
-
-const ANON_TOKEN = '0x0Db510e79909666d6dEc7f5e49370838c16D950f'
+import { CONTRACTS, IS_TESTNET, NETWORK_NAME } from '@/config/chains'
 
 const erc20Abi = [
   {
@@ -32,17 +31,24 @@ export function Header() {
   const { address, isConnected } = useAccount()
 
   const { data: balance } = useReadContract({
-    address: ANON_TOKEN,
+    address: CONTRACTS.ANON_TOKEN,
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address,
+      enabled: !!address && !!CONTRACTS.ANON_TOKEN,
     },
   })
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+      {/* Testnet Banner */}
+      {IS_TESTNET && (
+        <div className="bg-yellow-500/20 px-4 py-1 text-center text-xs font-medium text-yellow-600">
+          {NETWORK_NAME} Testnet
+        </div>
+      )}
+
       <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
         {/* Left: Logo */}
         <div className="flex items-center gap-2">
