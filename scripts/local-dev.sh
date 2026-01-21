@@ -73,7 +73,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Build Anvil command - always fork Base mainnet by default
-ANVIL_CMD="anvil --host 0.0.0.0 --fork-url $FORK_URL"
+# --auto-impersonate allows sending txs from any account without unlocking first
+ANVIL_CMD="anvil --host 0.0.0.0 --auto-impersonate --fork-url $FORK_URL"
 
 echo -e "${YELLOW}Forking from: $FORK_URL${NC}"
 if [ -n "$FORK_BLOCK" ]; then
