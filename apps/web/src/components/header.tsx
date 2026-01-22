@@ -144,7 +144,7 @@ export function Header() {
                     </a>
                   </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Post anonymously</p>
+                <p className="text-xs text-muted-foreground">Post anonymously</p>
               </div>
             </div>
 
@@ -184,8 +184,12 @@ export function Header() {
           {isFullyConnected && (
             <div className="border-t border-border/50 bg-black/20 px-3 py-2">
               <div className="flex items-stretch gap-1.5">
-                {/* Public Balance */}
-                <div className="flex-1 overflow-hidden rounded-lg bg-white/5">
+                {/* Public Balance - Deposit */}
+                <button
+                  onClick={() => setShowDepositModal(true)}
+                  disabled={walletBal === 0n}
+                  className="flex-1 cursor-pointer overflow-hidden rounded-lg bg-white/5 text-left transition-all hover:scale-[1.02] hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                >
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <Eye className="h-3 w-3 text-yellow-500" />
@@ -200,36 +204,32 @@ export function Header() {
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowDepositModal(true)}
-                    disabled={walletBal === 0n}
-                    className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  >
+                  <div className="flex w-full items-center justify-center gap-1 border-t border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     <ArrowRight className="h-3 w-3" />
                     Deposit
-                  </button>
-                </div>
+                  </div>
+                </button>
 
-                {/* Private Balance */}
-                <div className="flex-1 overflow-hidden rounded-lg bg-primary/10 ring-1 ring-primary/30">
+                {/* Private Balance - Withdraw */}
+                <button
+                  onClick={() => setShowWithdrawModal(true)}
+                  disabled={poolBal === 0n}
+                  className="flex-1 cursor-pointer overflow-hidden rounded-lg bg-primary/10 text-left ring-1 ring-primary/30 transition-all hover:scale-[1.02] hover:bg-primary/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                >
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Shield className="h-3 w-3 text-primary" />
+                      <Shield className="h-3 w-3 text-green-500" />
                       <span className="text-[10px] uppercase tracking-wider text-primary/70">Private</span>
                     </div>
                     <span className="font-mono text-sm font-bold tabular-nums text-primary">
                       {formatBalance(poolBal)}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setShowWithdrawModal(true)}
-                    disabled={poolBal === 0n}
-                    className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  >
+                  <div className="flex w-full items-center justify-center gap-1 border-t border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70">
                     <ArrowRight className="h-3 w-3 rotate-180" />
                     Withdraw
-                  </button>
-                </div>
+                  </div>
+                </button>
               </div>
 
               {/* Get tokens hint */}

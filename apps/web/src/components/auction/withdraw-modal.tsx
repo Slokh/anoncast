@@ -123,38 +123,40 @@ export function WithdrawModal({
       <DialogContent showCloseButton={!isProcessing}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
+            <Eye className="h-5 w-5 text-yellow-500" />
             Withdraw from Privacy Pool
           </DialogTitle>
           <DialogDescription>
-            Withdraw $ANON tokens from the privacy pool back to your public wallet.
+            Withdraw tokens back to your public wallet.
           </DialogDescription>
         </DialogHeader>
 
         {state === 'success' ? (
           <div className="flex flex-col items-center gap-4 py-6">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+              <CheckCircle className="h-10 w-10 text-green-500" />
+            </div>
             <div className="text-center">
-              <p className="text-lg font-semibold">Withdrawal Successful!</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {result && formatTokenAmount(result.amount)} $ANON withdrawn
+              <p className="text-lg font-bold">Withdrawal Successful!</p>
+              <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
+                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">$ANON</span>
               </p>
             </div>
-            <Button onClick={handleClose} className="mt-4 cursor-pointer">
+            <Button onClick={handleClose} className="mt-2 cursor-pointer transition-all hover:scale-105 active:scale-95">
               Close
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             {/* Private Balance Display */}
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">Private Balance</span>
+                <div className="flex items-center gap-1.5">
+                  <Shield className="h-3 w-3 text-green-500" />
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Private Balance</span>
                 </div>
-                <span className="text-lg font-semibold">
-                  {formatBalance(privateBalance)} $ANON
+                <span className="font-mono text-xl font-bold tabular-nums text-primary">
+                  {formatBalance(privateBalance)} <span className="text-sm font-normal">$ANON</span>
                 </span>
               </div>
             </div>
@@ -162,25 +164,25 @@ export function WithdrawModal({
             {/* Note Selection */}
             {availableNotes.length > 0 ? (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Select note to withdraw</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Select note to withdraw</label>
                 <div className="max-h-48 space-y-2 overflow-y-auto">
                   {availableNotes.map((note, index) => (
                     <button
                       key={note.commitment.toString()}
                       onClick={() => setSelectedNoteIndex(index)}
                       disabled={isProcessing}
-                      className={`w-full cursor-pointer rounded-lg border p-3 text-left transition-colors ${
+                      className={`w-full cursor-pointer rounded-lg border p-3 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${
                         selectedNoteIndex === index
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border bg-muted/30 hover:bg-muted/50'
-                      } disabled:cursor-not-allowed disabled:opacity-50`}
+                          ? 'border-primary/30 bg-primary/10 ring-1 ring-primary/30'
+                          : 'border-border/50 bg-muted/30 hover:bg-muted/50'
+                      } disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs uppercase tracking-wider text-muted-foreground">
                           Note #{index + 1}
                         </span>
-                        <span className="font-mono font-semibold">
-                          {formatUnits(note.amount, TOKEN_DECIMALS)} $ANON
+                        <span className="font-mono text-sm font-bold tabular-nums">
+                          {formatUnits(note.amount, TOKEN_DECIMALS)} <span className="text-xs font-normal text-primary">$ANON</span>
                         </span>
                       </div>
                     </button>
@@ -188,15 +190,15 @@ export function WithdrawModal({
                 </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-4 text-center text-xs text-muted-foreground">
                 No notes available to withdraw
               </div>
             )}
 
             {/* Info box */}
             {!isProcessing && state !== 'error' && selectedNote && (
-              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">Withdrawing:</p>
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground">Withdrawing</p>
                 <p className="mt-1">
                   {formatUnits(selectedNote.amount, TOKEN_DECIMALS)} $ANON will be sent to your public wallet.
                 </p>
@@ -206,10 +208,10 @@ export function WithdrawModal({
 
             {/* Error message */}
             {state === 'error' && error && (
-              <div className="max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <div className="max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/10 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
-                  <p className="text-sm font-medium text-destructive">Withdrawal Failed</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-destructive">Withdrawal Failed</p>
                 </div>
                 <p className="break-all text-xs text-destructive/80">{error}</p>
               </div>
@@ -219,7 +221,7 @@ export function WithdrawModal({
             <Button
               onClick={handleWithdraw}
               disabled={!canWithdraw || isProcessing}
-              className="w-full cursor-pointer"
+              className="w-full cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:shadow-primary/40 active:scale-[0.98] disabled:hover:scale-100"
               size="lg"
             >
               {isProcessing ? (

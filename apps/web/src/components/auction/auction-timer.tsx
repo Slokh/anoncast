@@ -66,23 +66,21 @@ export function AuctionTimer() {
 
   if (!state) {
     return (
-      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+      <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Timer skeleton */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
-                <Clock className="h-6 w-6 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="h-8 w-16 animate-pulse rounded bg-muted" />
-                <div className="mt-1 h-3 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-14 animate-pulse rounded bg-muted" />
+                <div className="mt-1 h-3 w-16 animate-pulse rounded bg-muted" />
               </div>
             </div>
-            {/* Bid skeleton */}
             <div className="text-right">
-              <div className="h-7 w-28 animate-pulse rounded bg-muted" />
-              <div className="mt-1 h-3 w-20 animate-pulse rounded bg-muted ml-auto" />
+              <div className="h-6 w-24 animate-pulse rounded bg-muted" />
+              <div className="mt-1 h-3 w-16 animate-pulse rounded bg-muted ml-auto" />
             </div>
           </div>
         </CardContent>
@@ -96,19 +94,18 @@ export function AuctionTimer() {
   return (
     <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between gap-4">
-          {/* Timer */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                isLastMinute ? 'animate-pulse bg-destructive/20' : 'bg-primary/20'
+              className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                isLastMinute ? 'animate-pulse bg-destructive/10' : 'bg-primary/10'
               }`}
             >
-              <Clock className={`h-6 w-6 ${isLastMinute ? 'text-destructive' : 'text-primary'}`} />
+              <Clock className={`h-5 w-5 ${isLastMinute ? 'text-destructive' : 'text-primary'}`} />
             </div>
             <div>
               <div
-                className={`font-mono text-2xl font-bold ${
+                className={`font-mono text-xl font-bold tabular-nums ${
                   isLastMinute ? 'text-destructive' : 'text-foreground'
                 }`}
               >
@@ -118,13 +115,13 @@ export function AuctionTimer() {
             </div>
           </div>
 
-          {/* Current bid */}
           <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-1.5">
               <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="font-mono text-xl font-bold">
-                {hasNoBids ? 'No bids' : `${formatBidAmount(state.highestBid)} $ANON`}
+              <span className="font-mono text-xl font-bold tabular-nums">
+                {hasNoBids ? 'No bids' : formatBidAmount(state.highestBid)}
               </span>
+              {!hasNoBids && <span className="text-sm text-primary">$ANON</span>}
             </div>
             <div className="text-xs text-muted-foreground">
               {state.bidCount} bid{state.bidCount !== 1 ? 's' : ''} this hour

@@ -25,21 +25,21 @@ export function PoolStats() {
   })
 
   return (
-    <div className="rounded-lg border border-border bg-gradient-to-br from-card to-card/50 p-4">
+    <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">In the pool</p>
-          <p className="text-2xl font-mono font-bold tabular-nums">
+          <p className="text-xs text-muted-foreground">Total in pool</p>
+          <p className="text-xl font-mono font-bold tabular-nums">
             {isLoading ? (
               <span className="text-muted-foreground animate-pulse">...</span>
             ) : (
-              <>{formattedTotal} <span className="text-base font-normal text-primary">$ANON</span></>
+              <>{formattedTotal} <span className="text-sm font-normal text-primary">$ANON</span></>
             )}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Deposits</p>
-          <p className="text-2xl font-mono font-bold tabular-nums">
+          <p className="text-xs text-muted-foreground">Deposits</p>
+          <p className="text-xl font-mono font-bold tabular-nums">
             {isLoading ? (
               <span className="text-muted-foreground animate-pulse">...</span>
             ) : (

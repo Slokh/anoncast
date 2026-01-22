@@ -39,9 +39,11 @@ export function EmbedInput({ onSubmit, onCancel }: EmbedInputProps) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-muted p-2">
+    <div className="rounded-lg border border-border/50 bg-white/5 p-2">
       <div className="flex items-center gap-2">
-        <Link2 className={`h-4 w-4 ${url ? 'text-foreground' : 'text-muted-foreground'}`} />
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5">
+          <Link2 className={`h-3.5 w-3.5 ${url ? 'text-foreground' : 'text-muted-foreground'}`} />
+        </div>
         <input
           type="url"
           placeholder="Paste a link..."
@@ -55,21 +57,21 @@ export function EmbedInput({ onSubmit, onCancel }: EmbedInputProps) {
         {url.trim() && (
           <button
             onClick={() => handleSubmit(url)}
-            className="cursor-pointer rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+            className="cursor-pointer rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 active:scale-95"
           >
             Add
           </button>
         )}
         <button
           onClick={onCancel}
-          className="cursor-pointer rounded-full bg-accent p-1.5 hover:bg-accent/70"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
           <X className="h-3 w-3" strokeWidth={3} />
         </button>
       </div>
 
       {error && (
-        <p className="mt-2 text-sm text-destructive">{error}</p>
+        <p className="mt-2 text-xs text-destructive">{error}</p>
       )}
     </div>
   )

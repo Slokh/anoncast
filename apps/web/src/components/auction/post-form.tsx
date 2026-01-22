@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAccount } from 'wagmi'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { parseUnits, formatUnits } from 'viem'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,11 +12,16 @@ import {
   X,
   Loader2,
   CheckCircle,
+  ExternalLink,
 } from 'lucide-react'
 import { ImageUpload } from './image-upload'
 import { EmbedInput } from './embed-input'
 import { EmbedPreview } from './embed-preview'
+import { DepositModal } from './deposit-modal'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
+import { useDeposit } from '@/hooks/use-deposit'
+
+const UNISWAP_URL = 'https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base'
 
 const MAX_CHARS = 320
 
@@ -27,14 +33,20 @@ export function PostForm() {
 
   const {
     isUnlocked,
+    isLoading: walletLoading,
     balance,
     error: walletError,
+    unlock,
+    sync,
     prepareTransfer,
     canAffordTransfer,
     getClaimCredentials,
     markNoteSpent,
     formatBalance,
+    generateDeposit,
   } = usePrivacyWallet()
+
+  const { tokenBalance } = useDeposit()
 
   // Form state
   const [text, setText] = useState('')
@@ -49,6 +61,8 @@ export function PostForm() {
   const [state, setState] = useState<FormState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [currentHighestBid, setCurrentHighestBid] = useState('0')
+  const [showDepositModal, setShowDepositModal] = useState(false)
+  const [pendingUnlock, setPendingUnlock] = useState(false)
 
   // Fetch current highest bid and set default
   useEffect(() => {
@@ -170,24 +184,56 @@ export function PostForm() {
     setError(null)
   }, [])
 
-  if (!isConnected || !isUnlocked) {
-    return null
-  }
+  // Handle unlock after wallet connects
+  useEffect(() => {
+    if (pendingUnlock && isConnected && !isUnlocked && !walletLoading) {
+      setPendingUnlock(false)
+      unlock().then((success) => {
+        if (success) {
+          sync()
+        }
+      })
+    }
+  }, [pendingUnlock, isConnected, isUnlocked, walletLoading, unlock, sync])
 
-  if (!balance || balance.available === 0n) {
-    return null
-  }
+  const handleConnectClick = useCallback(
+    (openConnectModal: () => void) => {
+      if (isConnected && !isUnlocked) {
+        unlock().then((success) => {
+          if (success) {
+            sync()
+          }
+        })
+      } else if (!isConnected) {
+        setPendingUnlock(true)
+        openConnectModal()
+      }
+    },
+    [isConnected, isUnlocked, unlock, sync]
+  )
+
+  // Determine which button to show
+  const isFullyConnected = isConnected && isUnlocked
+  const privateBalance = balance?.available ?? 0n
+  const publicBalance = tokenBalance ?? 0n
+  const needsMoreFunds = isFullyConnected && !hasEnoughBalance && bidAmountWei > 0n
+  const canDepositToAfford = needsMoreFunds && publicBalance >= bidAmountWei
+  const needsToBuy = needsMoreFunds && !canDepositToAfford
 
   if (state === 'success') {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 p-6">
-          <CheckCircle className="h-12 w-12 text-green-500" />
-          <p className="text-lg font-semibold">Bid Submitted!</p>
-          <p className="text-center text-sm text-muted-foreground">
-            If your bid is the highest when the slot ends, your post will be published.
-          </p>
-          <Button onClick={resetState} className="cursor-pointer">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+            <CheckCircle className="h-10 w-10 text-green-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold">Bid Submitted!</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              If your bid is the highest when the slot ends, your post will be published.
+            </p>
+          </div>
+          <Button onClick={resetState} className="cursor-pointer transition-all hover:scale-105 active:scale-95">
             Place Another Bid
           </Button>
         </CardContent>
@@ -204,7 +250,7 @@ export function PostForm() {
           value={text}
           onChange={handleTextChange}
           disabled={state !== 'idle'}
-          className="min-h-[100px] w-full resize-none bg-transparent text-[15px] leading-normal placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+          className="min-h-[100px] w-full resize-none bg-transparent text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
         />
 
         {image && (
@@ -265,8 +311,8 @@ export function PostForm() {
         )}
 
         {(error || walletError) && (
-          <div className="mt-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            {error || walletError}
+          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+            <p className="text-xs text-destructive">{error || walletError}</p>
           </div>
         )}
 
@@ -279,61 +325,99 @@ export function PostForm() {
         )}
 
         <div className="mt-3 flex items-center justify-between">
-          <div className="-ml-1.5 flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowImageUpload(true)}
               disabled={!!image || state !== 'idle'}
-              className="cursor-pointer rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <ImagePlus className="h-5 w-5" />
+              <ImagePlus className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => setShowEmbedInput(true)}
               disabled={!!embed || state !== 'idle'}
-              className="cursor-pointer rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Link2 className="h-5 w-5" />
+              <Link2 className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <span className={`text-xs ${isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
+          <span className={`flex h-7 items-center rounded-full bg-white/5 px-2.5 text-xs tabular-nums ${isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
             {charsRemaining}
           </span>
         </div>
 
-        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+        <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
           <div className="flex items-baseline gap-2">
-            <span className="mb-0.5 text-xs font-medium text-muted-foreground">Bid</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Bid</span>
             <input
               type="number"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
               placeholder="0"
-              className="flex-1 appearance-none bg-transparent text-2xl font-bold tabular-nums placeholder:text-muted-foreground focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-24 appearance-none bg-transparent font-mono text-xl font-bold tabular-nums placeholder:text-muted-foreground focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           </div>
 
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            size="sm"
-            className="cursor-pointer disabled:cursor-not-allowed"
-          >
-            {state !== 'idle' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
-          </Button>
+          {!isFullyConnected ? (
+            <ConnectButton.Custom>
+              {({ openConnectModal }) => (
+                <Button
+                  onClick={() => handleConnectClick(openConnectModal)}
+                  disabled={walletLoading}
+                  size="sm"
+                  className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {walletLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
+                </Button>
+              )}
+            </ConnectButton.Custom>
+          ) : needsToBuy ? (
+            <Button
+              asChild
+              size="sm"
+              className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95"
+            >
+              <a href={UNISWAP_URL} target="_blank" rel="noopener noreferrer">
+                Buy <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            </Button>
+          ) : canDepositToAfford ? (
+            <Button
+              onClick={() => setShowDepositModal(true)}
+              size="sm"
+              className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95"
+            >
+              Deposit
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              size="sm"
+              className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              {state !== 'idle' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
+            </Button>
+          )}
         </div>
 
         {bidAmount && !isValidBid && (
-          <div className="mt-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)}
-          </div>
-        )}
-        {bidAmount && isValidBid && !hasEnoughBalance && (
-          <div className="mt-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            Insufficient balance (have {formatBalance(balance.available)})
+          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+            <p className="text-xs text-destructive">
+              Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)} $ANON
+            </p>
           </div>
         )}
       </CardContent>
+
+      <DepositModal
+        open={showDepositModal}
+        onOpenChange={setShowDepositModal}
+        onSuccess={() => setShowDepositModal(false)}
+        generateDeposit={generateDeposit}
+        sync={sync}
+      />
     </Card>
   )
 }

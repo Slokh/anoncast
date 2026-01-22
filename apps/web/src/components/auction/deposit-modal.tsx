@@ -109,32 +109,33 @@ export function DepositModal({
       <DialogContent showCloseButton={!isProcessing}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+            <Shield className="h-5 w-5 text-green-500" />
             Deposit to Privacy Pool
           </DialogTitle>
           <DialogDescription>
-            Deposit $ANON tokens into the privacy pool. Your tokens will be
-            converted to private notes that only you can spend.
+            Your tokens will be converted to private notes that only you can spend.
           </DialogDescription>
         </DialogHeader>
 
         {state === 'success' ? (
           <div className="flex flex-col items-center gap-4 py-6">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+              <CheckCircle className="h-10 w-10 text-green-500" />
+            </div>
             <div className="text-center">
-              <p className="text-lg font-semibold">Deposit Successful!</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {result && formatTokenAmount(result.amount)} $ANON deposited
+              <p className="text-lg font-bold">Deposit Successful!</p>
+              <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
+                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">$ANON</span>
               </p>
             </div>
-            <Button onClick={handleClose} className="mt-4 cursor-pointer">
+            <Button onClick={handleClose} className="mt-2 cursor-pointer transition-all hover:scale-105 active:scale-95">
               Close
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             {/* Amount Input */}
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
               <div className="flex items-center justify-between">
                 <input
                   type="number"
@@ -142,48 +143,48 @@ export function DepositModal({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0"
                   disabled={isProcessing}
-                  className="w-full bg-transparent text-3xl font-semibold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
+                  className="w-full bg-transparent font-mono text-3xl font-bold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="ml-2 text-xl font-medium text-muted-foreground">$ANON</span>
+                <span className="ml-2 text-sm font-medium text-primary">$ANON</span>
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-3">
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Wallet className="h-3.5 w-3.5" />
-                  <span>Balance: {tokenBalance ? formatTokenAmount(tokenBalance) : '0'}</span>
+              <div className="mt-3 flex items-center justify-between border-t border-primary/20 pt-3">
+                <div className="flex items-center gap-1.5">
+                  <Wallet className="h-3 w-3 text-yellow-500" />
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Balance: {tokenBalance ? formatTokenAmount(tokenBalance) : '0'}
+                  </span>
                 </div>
                 <button
                   onClick={handleMaxClick}
                   disabled={isProcessing}
-                  className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+                  className="cursor-pointer rounded-md bg-primary/20 px-2 py-1 text-xs font-medium uppercase tracking-wider text-primary transition-all hover:scale-105 hover:bg-primary/30 active:scale-95 disabled:opacity-50"
                 >
                   MAX
                 </button>
               </div>
               {amount && !hasEnoughBalance && (
-                <p className="mt-2 text-sm text-destructive">Insufficient balance</p>
+                <p className="mt-2 text-xs text-destructive">Insufficient balance</p>
               )}
             </div>
 
             {/* Info box */}
             {!isProcessing && state !== 'error' && (
-              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">How it works:</p>
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground">How it works</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
-                  <li>Your tokens are deposited into the privacy pool</li>
-                  <li>
-                    A private note is created that only you can spend
-                  </li>
-                  <li>Use notes to bid anonymously in auctions</li>
+                  <li>Tokens deposited into the privacy pool</li>
+                  <li>A private note created only you can spend</li>
+                  <li>Use notes to bid anonymously</li>
                 </ul>
               </div>
             )}
 
             {/* Error message */}
             {state === 'error' && error && (
-              <div className="max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <div className="max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/10 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
-                  <p className="text-sm font-medium text-destructive">Deposit Failed</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-destructive">Deposit Failed</p>
                 </div>
                 <p className="break-all text-xs text-destructive/80">{error}</p>
               </div>
@@ -193,7 +194,7 @@ export function DepositModal({
             <Button
               onClick={handleDeposit}
               disabled={!canDeposit || isProcessing}
-              className="w-full cursor-pointer"
+              className="w-full cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:shadow-primary/40 active:scale-[0.98] disabled:hover:scale-100"
               size="lg"
             >
               {isProcessing ? (
