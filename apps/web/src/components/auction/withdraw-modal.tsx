@@ -142,9 +142,12 @@ export function WithdrawModal({
                 {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">$ANON</span>
               </p>
             </div>
-            <Button onClick={handleClose} className="mt-2 cursor-pointer transition-all hover:scale-105 active:scale-95">
+            <button
+              onClick={handleClose}
+              className="mt-2 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
+            >
               Close
-            </Button>
+            </button>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -218,15 +221,14 @@ export function WithdrawModal({
             )}
 
             {/* Action button */}
-            <Button
+            <button
               onClick={handleWithdraw}
               disabled={!canWithdraw || isProcessing}
-              className="w-full cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:shadow-primary/40 active:scale-[0.98] disabled:hover:scale-100"
-              size="lg"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:shadow-primary/40 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   {state === 'preparing' && 'Preparing...'}
                   {state === 'generating_proof' && 'Generating proof...'}
                   {state === 'withdrawing' && 'Submitting...'}
@@ -239,7 +241,7 @@ export function WithdrawModal({
               ) : (
                 'Select a note'
               )}
-            </Button>
+            </button>
           </div>
         )}
       </DialogContent>

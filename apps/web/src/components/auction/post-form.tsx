@@ -233,9 +233,12 @@ export function PostForm() {
               If your bid is the highest when the slot ends, your post will be published.
             </p>
           </div>
-          <Button onClick={resetState} className="cursor-pointer transition-all hover:scale-105 active:scale-95">
+          <button
+            onClick={resetState}
+            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
+          >
             Place Another Bid
-          </Button>
+          </button>
         </CardContent>
       </Card>
     )
@@ -362,43 +365,39 @@ export function PostForm() {
           {!isFullyConnected ? (
             <ConnectButton.Custom>
               {({ openConnectModal }) => (
-                <Button
+                <button
                   onClick={() => handleConnectClick(openConnectModal)}
                   disabled={walletLoading}
-                  size="sm"
-                  className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 disabled:cursor-wait disabled:opacity-70"
                 >
                   {walletLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
-                </Button>
+                </button>
               )}
             </ConnectButton.Custom>
           ) : needsToBuy ? (
-            <Button
-              asChild
-              size="sm"
-              className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95"
+            <a
+              href={UNISWAP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
             >
-              <a href={UNISWAP_URL} target="_blank" rel="noopener noreferrer">
-                Buy <ExternalLink className="ml-1 h-3 w-3" />
-              </a>
-            </Button>
+              Buy <ExternalLink className="h-3 w-3" />
+            </a>
           ) : canDepositToAfford ? (
-            <Button
+            <button
               onClick={() => setShowDepositModal(true)}
-              size="sm"
-              className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95"
+              className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
             >
               Deposit
-            </Button>
+            </button>
           ) : (
-            <Button
+            <button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              size="sm"
-              className="cursor-pointer shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 active:scale-95 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
             >
               {state !== 'idle' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
-            </Button>
+            </button>
           )}
         </div>
 
