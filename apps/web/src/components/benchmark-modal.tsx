@@ -12,9 +12,9 @@ import {
 import { Loader2, Timer, CheckCircle, XCircle, Play, AlertCircle } from 'lucide-react'
 import {
   generateProof,
-  type ProverMode,
   type ProofInput,
 } from '@/lib/prover'
+import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
 
 type BenchmarkRun = {
   iteration: number
@@ -44,21 +44,16 @@ type WithdrawPreparation = {
 
 const ITERATIONS = 3
 
-const MODE_LABELS: Record<ProverMode, string> = {
-  main: 'Client (Browser WASM)',
-  server: 'Server (Native bb)',
-}
-
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   notes: Note[]
   prepareWithdraw: (amount: bigint) => Promise<WithdrawPreparation | null>
-  proofMode: ProverMode
 }
 
-export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw, proofMode }: Props) {
+export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: Props) {
   const { address } = useAccount()
+  const { mode: proofMode } = useProofMode()
   const [state, setState] = useState<BenchmarkState>('idle')
   const [runs, setRuns] = useState<BenchmarkRun[]>([])
   const [currentIteration, setCurrentIteration] = useState(0)
@@ -206,7 +201,7 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw, pro
             Withdraw Proof Benchmark
           </DialogTitle>
           <DialogDescription>
-            {MODE_LABELS[proofMode]} - {ITERATIONS} iterations
+            {PROOF_MODE_INFO[proofMode].label} mode - {ITERATIONS} iterations
           </DialogDescription>
         </DialogHeader>
 
@@ -340,12 +335,10 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw, pro
           {state === 'complete' && (
             <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
               <p>
-                {proofMode === 'server'
-                  ? 'Server mode uses native nargo + bb CLI for proof generation.'
-                  : 'Client mode uses browser WASM for proof generation (blocks UI).'}
+                <strong>{PROOF_MODE_INFO[proofMode].label}:</strong> {PROOF_MODE_INFO[proofMode].description}
               </p>
               <p className="mt-1">
-                Toggle proof mode in the testnet banner to compare.
+                Change proof mode in the withdraw modal to compare.
               </p>
             </div>
           )}

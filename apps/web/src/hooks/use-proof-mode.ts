@@ -5,7 +5,19 @@ import type { ProverMode } from '@/lib/prover'
 
 const STORAGE_KEY = 'anon:proofMode'
 const VALID_MODES: ProverMode[] = ['main', 'server']
-const DEFAULT_MODE: ProverMode = 'main'
+const DEFAULT_MODE: ProverMode = 'server' // Default to fast (server) mode
+
+// User-friendly names for the modes
+export const PROOF_MODE_INFO = {
+  server: {
+    label: 'Fast',
+    description: 'Server generates proof (~8s). Your note data is sent to our server.',
+  },
+  main: {
+    label: 'Private',
+    description: 'Browser generates proof (slower). Your data never leaves your device.',
+  },
+} as const
 
 export function useProofMode() {
   const [mode, setModeState] = useState<ProverMode>(DEFAULT_MODE)
@@ -39,17 +51,11 @@ export function useProofMode() {
     }
   }, [])
 
-  const toggleMode = useCallback(() => {
-    const nextMode = mode === 'main' ? 'server' : 'main'
-    setMode(nextMode)
-  }, [mode, setMode])
-
   return {
     mode,
     setMode,
-    toggleMode,
-    isServer: mode === 'server',
-    isClient: mode === 'main',
+    isFast: mode === 'server',
+    isPrivate: mode === 'main',
   }
 }
 

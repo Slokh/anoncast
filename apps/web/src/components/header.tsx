@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { ArrowRight, Loader2, Shield, Eye, Trash2, MessageSquare, Timer, Cpu, Server } from 'lucide-react'
+import { ArrowRight, Loader2, Shield, Eye, Trash2, MessageSquare, Timer } from 'lucide-react'
 import { IS_TESTNET, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
 import { BenchmarkModal } from './benchmark-modal'
-import { useProofMode } from '@/hooks/use-proof-mode'
 import { DepositModal } from './auction/deposit-modal'
 import { WithdrawModal } from './auction/withdraw-modal'
 
@@ -33,7 +32,6 @@ export function Header() {
   } = usePrivacyWallet()
 
   const { tokenBalance, formatTokenAmount, refetchBalance } = useDeposit()
-  const { mode: proofMode, toggleMode: toggleProofMode } = useProofMode()
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false)
@@ -101,18 +99,6 @@ export function Header() {
         <div className="flex items-center justify-between bg-yellow-500/20 px-4 py-1 text-xs font-medium text-yellow-600">
           <span>{NETWORK_NAME} Testnet</span>
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleProofMode}
-              className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
-              title={`Proof mode: ${proofMode === 'server' ? 'Server (native bb)' : 'Client (browser WASM)'}`}
-            >
-              {proofMode === 'server' ? (
-                <Server className="h-3 w-3" />
-              ) : (
-                <Cpu className="h-3 w-3" />
-              )}
-              <span>Proof: {proofMode === 'server' ? 'Server' : 'Client'}</span>
-            </button>
             <button
               onClick={() => setShowBenchmarkModal(true)}
               className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
@@ -325,7 +311,6 @@ export function Header() {
         onOpenChange={setShowBenchmarkModal}
         notes={notes}
         prepareWithdraw={prepareWithdraw}
-        proofMode={proofMode}
       />
     </>
   )

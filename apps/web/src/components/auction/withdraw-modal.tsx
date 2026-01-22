@@ -16,9 +16,13 @@ import {
   Loader2,
   Eye,
   Shield,
+  Zap,
+  Lock,
 } from 'lucide-react'
 import { useWithdraw } from '@/hooks/use-withdraw'
 import { TOKEN_DECIMALS } from '@/config/chains'
+import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
+import type { ProverMode } from '@/lib/prover'
 
 type Note = {
   secret: bigint
@@ -59,6 +63,7 @@ export function WithdrawModal({
   formatBalance,
 }: Props) {
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null)
+  const { mode: proofMode, setMode: setProofMode } = useProofMode()
 
   const {
     state,
@@ -198,13 +203,40 @@ export function WithdrawModal({
               </div>
             )}
 
-            {/* Info box */}
+            {/* Proof Mode Selection */}
             {!isProcessing && state !== 'error' && selectedNote && (
-              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p className="font-semibold text-foreground">Withdrawing</p>
-                <p className="mt-1">
-                  {formatUnits(selectedNote.amount, TOKEN_DECIMALS)} ANON will be sent to your public wallet.
-                </p>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Proof Generation
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['server', 'main'] as ProverMode[]).map((mode) => {
+                    const info = PROOF_MODE_INFO[mode]
+                    const isSelected = proofMode === mode
+                    const Icon = mode === 'server' ? Zap : Lock
+                    return (
+                      <button
+                        key={mode}
+                        onClick={() => setProofMode(mode)}
+                        className={`cursor-pointer rounded-lg border p-3 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                          isSelected
+                            ? 'border-primary/30 bg-primary/10 ring-1 ring-primary/30'
+                            : 'border-border/50 bg-muted/30 hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : ''}`}>
+                            {info.label}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {info.description}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
