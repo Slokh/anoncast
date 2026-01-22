@@ -2,6 +2,9 @@
  * End-to-end test for deposit + withdraw flow
  * Run against local anvil fork: bun run scripts/test-withdraw-flow.ts
  *
+ * Options:
+ *   --server  Use server-side proof generation (API at http://localhost:3000)
+ *
  * Reads contract addresses from apps/web/.env.local (created by local-dev.sh)
  */
 
@@ -218,8 +221,61 @@ class MerkleTree {
   }
 }
 
+// Parse command line args
+const USE_SERVER = process.argv.includes('--server')
+const SERVER_URL = 'http://localhost:3000'
+
+// Server-side proof generation
+async function generateProofServer(input: {
+  note: { secret: bigint; nullifier: bigint; commitment: bigint; amount: bigint; leafIndex: number }
+  merklePath: bigint[]
+  merkleIndices: number[]
+  merkleRoot: bigint
+  recipient: bigint
+}): Promise<{ proof: number[]; publicInputs: string[] }> {
+  console.log('  Calling server API at', SERVER_URL + '/api/prove/withdraw')
+
+  const serializedInput = {
+    note: {
+      secret: input.note.secret.toString(),
+      nullifier: input.note.nullifier.toString(),
+      commitment: input.note.commitment.toString(),
+      amount: input.note.amount.toString(),
+      leafIndex: input.note.leafIndex,
+    },
+    merklePath: input.merklePath.map(p => p.toString()),
+    merkleIndices: input.merkleIndices,
+    merkleRoot: input.merkleRoot.toString(),
+    recipient: input.recipient.toString(),
+  }
+
+  const response = await fetch(SERVER_URL + '/api/prove/withdraw', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(serializedInput),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    console.error('Server error:', errorData)
+    throw new Error(errorData.error || 'Server proof generation failed')
+  }
+
+  const data = await response.json()
+  console.log('  Server response timing:')
+  console.log('    Witness gen:', data.timing?.witnessGenTime?.toFixed(0) || '?', 'ms')
+  console.log('    Proof gen:', data.timing?.proofGenerationTime?.toFixed(0) || '?', 'ms')
+
+  return {
+    proof: data.proof,
+    publicInputs: data.publicInputs,
+  }
+}
+
 async function main() {
-  console.log('=== Deposit + Withdraw Flow Test ===\n')
+  console.log('=== Deposit + Withdraw Flow Test ===')
+  console.log('Mode:', USE_SERVER ? 'SERVER (native bb)' : 'CLIENT (bb.js)')
+  console.log('')
   console.log('Pool contract:', POOL_ADDRESS)
   console.log('')
 
@@ -438,15 +494,8 @@ async function main() {
   const nullifierHash = computeNullifierHash(nullifier)
   console.log('Nullifier hash:', `0x${nullifierHash.toString(16)}`)
 
-  // Load circuit and vkey
-  const circuit = await import('../src/circuits/withdraw/target/anon_withdraw.json')
-  const vkey = await import('../src/circuits/withdraw/target/vk.json')
-
   // Use on-chain root for the proof
   const rootForProof = BigInt(onChainRoot)
-
-  const { WithdrawVerifier } = await import('../src/withdraw')
-  const verifier = new WithdrawVerifier(circuit.default || circuit, vkey.default || vkey)
 
   const recipientBigInt = BigInt(account.address)
 
@@ -457,24 +506,59 @@ async function main() {
   console.log('  merkle root:', `0x${rootForProof.toString(16)}`)
   console.log('  recipient:', account.address)
 
-  // Generate proof with keccak option for EVM compatibility
-  console.log('\n  Generating proof with keccak option for EVM compatibility...')
-  const proofData = await verifier.generateSolidityWithdrawProof({
-    note: {
-      secret,
-      nullifier,
-      commitment,
-      amount: depositAmount,
-      leafIndex: ourLeafIndex,
-    },
-    merklePath,
-    merkleIndices,
-    merkleRoot: rootForProof,
-    recipient: recipientBigInt,
-  })
+  let proofData: { proof: number[]; publicInputs: string[] }
+
+  if (USE_SERVER) {
+    // Server-side proof generation
+    console.log('\n  Using SERVER mode (native bb)...')
+    proofData = await generateProofServer({
+      note: {
+        secret,
+        nullifier,
+        commitment,
+        amount: depositAmount,
+        leafIndex: ourLeafIndex,
+      },
+      merklePath,
+      merkleIndices,
+      merkleRoot: rootForProof,
+      recipient: recipientBigInt,
+    })
+  } else {
+    // Client-side proof generation (bb.js)
+    console.log('\n  Using CLIENT mode (bb.js)...')
+
+    // Load circuit and vkey
+    const circuit = await import('../src/circuits/withdraw/target/anon_withdraw.json')
+    const vkey = await import('../src/circuits/withdraw/target/vk.json')
+
+    const { WithdrawVerifier } = await import('../src/withdraw')
+    const verifier = new WithdrawVerifier(circuit.default || circuit, vkey.default || vkey)
+
+    const localProof = await verifier.generateSolidityWithdrawProof({
+      note: {
+        secret,
+        nullifier,
+        commitment,
+        amount: depositAmount,
+        leafIndex: ourLeafIndex,
+      },
+      merklePath,
+      merkleIndices,
+      merkleRoot: rootForProof,
+      recipient: recipientBigInt,
+    })
+    proofData = localProof
+  }
+
   console.log('  Proof generated!')
-  console.log('  Proof length:', proofData.proof.length)
+  console.log('  Proof length:', proofData.proof.length, '(expected: 14080)')
   console.log('  Public inputs:', proofData.publicInputs)
+
+  // Validate proof length
+  if (proofData.proof.length !== 14080) {
+    console.error('  WARNING: Proof length mismatch! Expected 14080, got', proofData.proof.length)
+  }
 
   // Analyze proof format
   const fullProof = new Uint8Array(proofData.proof)
@@ -492,10 +576,19 @@ async function main() {
   console.log('    After header - bytes 32-64 (publicInputsSize):', '0x' + Buffer.from(afterHeader.slice(32, 64)).toString('hex'))
   console.log('    After header - bytes 64-96 (publicInputsOffset):', '0x' + Buffer.from(afterHeader.slice(64, 96)).toString('hex'))
 
-  // Test verification locally first
+  // Test verification locally first (only in client mode since we need the verifier)
   console.log('\n--- Step 6: Local Verification ---')
-  const localVerifyResult = await verifier.verifyWithdrawProof(proofData)
-  console.log('Local verification:', localVerifyResult ? 'PASSED' : 'FAILED')
+  if (USE_SERVER) {
+    console.log('Skipping local verification in server mode (verifier not loaded)')
+  } else {
+    // Load verifier for local check
+    const circuit = await import('../src/circuits/withdraw/target/anon_withdraw.json')
+    const vkey = await import('../src/circuits/withdraw/target/vk.json')
+    const { WithdrawVerifier } = await import('../src/withdraw')
+    const verifier = new WithdrawVerifier(circuit.default || circuit, vkey.default || vkey)
+    const localVerifyResult = await verifier.verifyWithdrawProof(proofData)
+    console.log('Local verification:', localVerifyResult ? 'PASSED' : 'FAILED')
+  }
 
   // Test on-chain verifier directly
   console.log('\n--- Step 7: On-chain Verifier Test ---')

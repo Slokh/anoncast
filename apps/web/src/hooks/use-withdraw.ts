@@ -8,6 +8,8 @@ import {
 import { formatUnits, pad, toHex } from 'viem'
 import { CONTRACTS, TOKEN_DECIMALS } from '@/config/chains'
 import { ANON_POOL_ABI } from '@/config/contracts'
+import { generateProof, type ProofInput } from '@/lib/prover'
+import { getProofMode } from './use-proof-mode'
 
 export type WithdrawState =
   | 'idle'
@@ -37,23 +39,6 @@ type WithdrawPreparation = {
   inputNote: Note
   merkleProof: { path: bigint[]; indices: number[]; root: bigint }
   nullifierHash: bigint
-}
-
-// Lazy-loaded verifier instance
-let withdrawVerifierPromise: Promise<any> | null = null
-
-async function getWithdrawVerifier() {
-  if (!withdrawVerifierPromise) {
-    withdrawVerifierPromise = (async () => {
-      const [{ WithdrawVerifier }, circuit, vkey] = await Promise.all([
-        import('@anon/pool'),
-        import('@anon/pool/circuits/withdraw/target/anon_withdraw.json'),
-        import('@anon/pool/circuits/withdraw/target/vk.json'),
-      ])
-      return new WithdrawVerifier(circuit.default || circuit, vkey.default || vkey)
-    })()
-  }
-  return withdrawVerifierPromise
 }
 
 export function useWithdraw() {
@@ -94,29 +79,31 @@ export function useWithdraw() {
         // Step 2: Generate ZK proof
         setState('generating_proof')
 
-        console.log('Generating withdraw proof...')
-        const verifier = await getWithdrawVerifier()
+        const proofMode = getProofMode()
+        console.log(`Generating withdraw proof (${proofMode} mode)...`)
 
         // Convert address to bigint for the circuit
         const recipientBigInt = BigInt(address)
 
-        // Use generateSolidityWithdrawProof which uses { keccak: true } for EVM compatibility
-        const proofData = await verifier.generateSolidityWithdrawProof({
+        const proofInput: ProofInput = {
           note: preparation.inputNote,
           merklePath: preparation.merkleProof.path,
           merkleIndices: preparation.merkleProof.indices,
           merkleRoot: preparation.merkleProof.root,
           recipient: recipientBigInt,
-        })
+        }
+
+        const proofResult = await generateProof(proofInput, proofMode)
 
         console.log('Proof generated:', {
-          proofLength: proofData.proof.length,
-          publicInputs: proofData.publicInputs,
+          proofLength: proofResult.proof.length,
+          publicInputs: proofResult.publicInputs,
+          mode: proofMode,
         })
 
         // Use raw proof bytes directly - Solidity verifier expects full 14080 bytes (440 * 32)
         // Do NOT use splitHonkProof or strip any headers
-        const proofBytes = new Uint8Array(proofData.proof)
+        const proofBytes = new Uint8Array(proofResult.proof)
 
         console.log('Proof length:', proofBytes.length, '(expected: 14080)')
         console.log('First 64 bytes of proof:', Array.from(proofBytes.slice(0, 64)))
