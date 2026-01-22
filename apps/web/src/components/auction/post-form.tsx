@@ -25,6 +25,15 @@ const MAX_CHARS = 320
 
 type FormState = 'idle' | 'generating_proof' | 'bidding' | 'success' | 'error'
 
+type MockBidType = 'none' | 'text' | 'image' | 'link'
+
+// Must match MOCK_BIDS in auction-timer.tsx
+const MOCK_BID_AMOUNTS: Record<Exclude<MockBidType, 'none'>, string> = {
+  text: '42000000000000000000', // 42 tokens
+  image: '69000000000000000000', // 69 tokens
+  link: '100000000000000000000', // 100 tokens
+}
+
 export function PostForm() {
   const { isConnected } = useAccount()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -56,21 +65,41 @@ export function PostForm() {
   // Submission state
   const [state, setState] = useState<FormState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [currentHighestBid, setCurrentHighestBid] = useState('0')
+  const [apiHighestBid, setApiHighestBid] = useState('0')
+  const [mockBidType, setMockBidType] = useState<MockBidType>('none')
   const [showDepositModal, setShowDepositModal] = useState(false)
 
-  // Fetch current highest bid and set default
+  // Check localStorage for mock bid setting
+  useEffect(() => {
+    const stored = localStorage.getItem('anon:mockBid') as MockBidType | null
+    setMockBidType(stored || 'none')
+
+    // Listen for mock bid toggle events
+    const handleToggle = () => {
+      const updated = localStorage.getItem('anon:mockBid') as MockBidType | null
+      setMockBidType(updated || 'none')
+    }
+    window.addEventListener('storage', handleToggle)
+    window.addEventListener('mockBidToggle', handleToggle)
+    return () => {
+      window.removeEventListener('storage', handleToggle)
+      window.removeEventListener('mockBidToggle', handleToggle)
+    }
+  }, [])
+
+  // Determine the effective highest bid (mock or real)
+  const currentHighestBid = mockBidType !== 'none'
+    ? MOCK_BID_AMOUNTS[mockBidType]
+    : apiHighestBid
+
+  // Fetch current highest bid from API
   useEffect(() => {
     async function fetchBid() {
       try {
         const res = await fetch('/api/auction/current')
         if (res.ok) {
           const data = await res.json()
-          setCurrentHighestBid(data.highestBid || '0')
-          // Set default bid to highest + 1 (in whole tokens)
-          const highestInTokens = Number(BigInt(data.highestBid || '0') / BigInt(10 ** 18))
-          const nextBid = (highestInTokens + 1).toString()
-          setBidAmount(nextBid)
+          setApiHighestBid(data.highestBid || '0')
         }
       } catch {
         // Silent fail
@@ -78,6 +107,13 @@ export function PostForm() {
     }
     fetchBid()
   }, [])
+
+  // Update bid amount when mock mode or highest bid changes
+  useEffect(() => {
+    const highestInTokens = Number(BigInt(currentHighestBid) / BigInt(10 ** 18))
+    const nextBid = (highestInTokens + 1).toString()
+    setBidAmount(nextBid)
+  }, [currentHighestBid])
 
   const textLength = new Blob([text ?? '']).size
   const isOverLimit = textLength > MAX_CHARS
@@ -216,7 +252,8 @@ export function PostForm() {
 
   return (
     <Card>
-      <CardContent className="p-4">
+      <CardContent>
+        <div className="px-4 pt-4 pb-3">
         <textarea
           ref={textareaRef}
           placeholder="What's happening, anon?"
@@ -319,8 +356,9 @@ export function PostForm() {
             {charsRemaining}
           </span>
         </div>
+        </div>
 
-        <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
+        <div className="px-4 flex items-center justify-between border-t border-border/50 py-3">
           <div className="flex items-baseline gap-2">
             <span className="text-xs uppercase tracking-wider text-muted-foreground">Bid</span>
             <input

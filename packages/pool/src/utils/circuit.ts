@@ -73,7 +73,11 @@ export abstract class Circuit {
     const { witness } = await noir.execute(input)
 
     // bb.js 0.82.2 supports keccak option for EVM-compatible proofs
-    return await backend.generateProof(witness, options)
+    // Only pass options if keccak is explicitly set
+    if (options?.keccak !== undefined) {
+      return await backend.generateProof(witness, { keccak: options.keccak })
+    }
+    return await backend.generateProof(witness)
   }
 
   abstract parseData(publicInputs: string[]): unknown

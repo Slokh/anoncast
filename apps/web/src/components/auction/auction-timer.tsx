@@ -193,7 +193,7 @@ export function AuctionTimer() {
 
         {/* Current highest bid content */}
         {hasContent && (
-          <div className="mt-3 border-t border-primary/20 pt-3">
+          <div className="-mx-4 mt-3 border-t border-border/50 px-4 pt-3">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Current leading post</div>
             <p className="mt-2 text-sm text-foreground">{displayState.highestBidContent!.content}</p>
             {displayState.highestBidContent!.images?.[0] && (

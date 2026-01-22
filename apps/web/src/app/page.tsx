@@ -1,3 +1,4 @@
+import { Shield } from 'lucide-react'
 import { Header } from '@/components/header'
 import { PostForm } from '@/components/auction/post-form'
 import { AuctionTimer } from '@/components/auction/auction-timer'
@@ -32,7 +33,10 @@ export default function Home() {
               <p className="text-muted-foreground">Previous winner <span className="text-foreground">earns the winning bid</span></p>
             </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">ZK proofs keep your balance, bids, and identity hidden.</p>
+          <div className="-mx-4 mt-3 flex items-center gap-2 border-t border-border/50 px-4 pt-3 text-xs text-muted-foreground">
+            <Shield className="h-3 w-3 text-green-500" />
+            <span>ZK proofs keep your balance, bids, and identity hidden.</span>
+          </div>
         </div>
 
 {/* <PoolStats /> */}

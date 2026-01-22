@@ -216,8 +216,8 @@ export function Header() {
 
           {/* Balance HUD - only show when connected */}
           {isFullyConnected && (
-            <div className="border-t border-border/50 bg-black/20 px-3 py-2">
-              <div className="flex items-stretch gap-1.5">
+            <div className="border-t border-border/50 bg-black/20 p-2">
+              <div className="flex items-stretch gap-2">
                 {/* Public Balance - Deposit */}
                 <button
                   onClick={() => setShowDepositModal(true)}
