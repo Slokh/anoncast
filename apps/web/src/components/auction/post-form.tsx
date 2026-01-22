@@ -18,6 +18,7 @@ import { EmbedPreview } from './embed-preview'
 import { DepositModal } from './deposit-modal'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
+import { useTokenPrice } from '@/hooks/use-token-price'
 
 const UNISWAP_URL = 'https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base'
 
@@ -52,6 +53,7 @@ export function PostForm() {
   } = usePrivacyWallet()
 
   const { tokenBalance } = useDeposit()
+  const { formatUsd, formatUsdFromNumber } = useTokenPrice()
 
   // Form state
   const [text, setText] = useState('')
@@ -358,16 +360,22 @@ export function PostForm() {
         </div>
         </div>
 
-        <div className="px-4 flex items-center justify-between border-t border-border/50 py-3">
+        <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Bid</span>
-            <input
-              type="number"
-              value={bidAmount}
-              onChange={(e) => setBidAmount(e.target.value)}
-              placeholder="0"
-              className="w-24 appearance-none bg-transparent font-mono text-xl font-bold tabular-nums placeholder:text-muted-foreground focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            />
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">BID</span>
+            <div className="relative border-b border-dashed border-muted-foreground/30">
+              <span className="invisible font-mono text-xl font-bold tabular-nums">{bidAmount || '0'}</span>
+              <input
+                type="number"
+                value={bidAmount}
+                onChange={(e) => setBidAmount(e.target.value)}
+                placeholder="0"
+                className="absolute inset-0 w-full appearance-none bg-transparent font-mono text-xl font-bold tabular-nums placeholder:text-muted-foreground focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              ANON{bidAmount && formatUsdFromNumber(parseFloat(bidAmount) || 0) && ` (${formatUsdFromNumber(parseFloat(bidAmount) || 0)})`}
+            </span>
           </div>
 
           {needsToBuy ? (
@@ -398,7 +406,7 @@ export function PostForm() {
         </div>
 
         {bidAmount && !isValidBid && (
-          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+          <div className="m-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
             <p className="text-xs text-destructive">
               Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)} ANON
             </p>

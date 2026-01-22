@@ -21,6 +21,7 @@ import {
 import { useWithdraw } from '@/hooks/use-withdraw'
 import { TOKEN_DECIMALS } from '@/config/chains'
 import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
+import { useTokenPrice } from '@/hooks/use-token-price'
 import type { ProverMode } from '@/lib/prover'
 
 type Note = {
@@ -63,6 +64,7 @@ export function WithdrawModal({
 }: Props) {
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null)
   const { mode: proofMode, setMode: setProofMode } = useProofMode()
+  const { formatUsd } = useTokenPrice()
 
   const {
     state,
@@ -143,8 +145,11 @@ export function WithdrawModal({
             <div className="text-center">
               <p className="text-lg font-bold">Withdrawal Successful!</p>
               <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
-                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">ANON</span>
+                {result && formatTokenAmount(result.amount)} ANON
               </p>
+              {result && formatUsd(result.amount) && (
+                <p className="text-sm text-muted-foreground">{formatUsd(result.amount)}</p>
+              )}
             </div>
             <button
               onClick={handleClose}
@@ -162,9 +167,14 @@ export function WithdrawModal({
                   <Shield className="h-3 w-3 text-green-500" />
                   <span className="text-xs uppercase tracking-wider text-muted-foreground">Private Balance</span>
                 </div>
-                <span className="font-mono text-xl font-bold tabular-nums text-primary">
-                  {formatBalance(privateBalance)} <span className="text-sm font-normal">ANON</span>
-                </span>
+                <div className="text-right">
+                  <div className="font-mono text-xl font-bold tabular-nums text-primary">
+                    {formatBalance(privateBalance)} ANON
+                  </div>
+                  {formatUsd(privateBalance) && (
+                    <div className="text-sm text-primary/60">{formatUsd(privateBalance)}</div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -188,9 +198,14 @@ export function WithdrawModal({
                         <span className="text-xs uppercase tracking-wider text-muted-foreground">
                           Note #{index + 1}
                         </span>
-                        <span className="font-mono text-sm font-bold tabular-nums">
-                          {formatUnits(note.amount, TOKEN_DECIMALS)} <span className="text-xs font-normal text-primary">ANON</span>
-                        </span>
+                        <div className="text-right">
+                          <div className="font-mono text-sm font-bold tabular-nums">
+                            {formatUnits(note.amount, TOKEN_DECIMALS)} ANON
+                          </div>
+                          {formatUsd(note.amount) && (
+                            <div className="text-xs text-muted-foreground">{formatUsd(note.amount)}</div>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}

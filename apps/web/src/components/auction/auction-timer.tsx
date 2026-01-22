@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Clock, TrendingUp } from 'lucide-react'
+import { Clock, Trophy } from 'lucide-react'
+import { useTokenPrice } from '@/hooks/use-token-price'
 
 type HighestBidContent = {
   content: string
@@ -67,6 +68,7 @@ export function AuctionTimer() {
   const [state, setState] = useState<AuctionState | null>(null)
   const [localTimeRemaining, setLocalTimeRemaining] = useState<number>(0)
   const [mockBidType, setMockBidType] = useState<MockBidType>('none')
+  const { formatUsd } = useTokenPrice()
 
   // Check localStorage for mock bid setting
   useEffect(() => {
@@ -179,13 +181,15 @@ export function AuctionTimer() {
 
           <div className="text-right">
             <div className="flex items-center justify-end gap-1.5">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="font-mono text-xl font-bold tabular-nums">
-                {hasNoBids ? 'No bids' : formatBidAmount(displayState.highestBid)}
-              </span>
-              {!hasNoBids && <span className="text-sm text-primary">ANON</span>}
+              <Trophy className="h-4 w-4 text-yellow-500" />
+              <div className="font-mono text-xl font-bold tabular-nums">
+                {hasNoBids ? 'No bids' : `${formatBidAmount(displayState.highestBid)} ANON`}
+              </div>
             </div>
             <div className="text-xs text-muted-foreground">
+              {!hasNoBids && formatUsd(BigInt(displayState.highestBid)) && (
+                <>{formatUsd(BigInt(displayState.highestBid))} · </>
+              )}
               {displayState.bidCount} bid{displayState.bidCount !== 1 ? 's' : ''} this hour
             </div>
           </div>

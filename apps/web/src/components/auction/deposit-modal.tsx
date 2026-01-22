@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useDeposit } from '@/hooks/use-deposit'
 import { TOKEN_DECIMALS } from '@/config/chains'
+import { useTokenPrice } from '@/hooks/use-token-price'
 
 type Props = {
   open: boolean
@@ -46,6 +47,7 @@ export function DepositModal({
     reset,
     formatTokenAmount,
   } = useDeposit()
+  const { formatUsd, formatUsdFromNumber } = useTokenPrice()
 
   // Default to max balance when modal opens
   useEffect(() => {
@@ -125,8 +127,11 @@ export function DepositModal({
             <div className="text-center">
               <p className="text-lg font-bold">Deposit Successful!</p>
               <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
-                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">ANON</span>
+                {result && formatTokenAmount(result.amount)} ANON
               </p>
+              {result && formatUsd(result.amount) && (
+                <p className="text-sm text-muted-foreground">{formatUsd(result.amount)}</p>
+              )}
             </div>
             <button
               onClick={handleClose}
@@ -139,23 +144,33 @@ export function DepositModal({
           <div className="flex flex-col gap-4">
             {/* Amount Input */}
             <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
-              <div className="flex items-center justify-between">
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0"
-                  disabled={isProcessing}
-                  className="w-full bg-transparent font-mono text-3xl font-bold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span className="ml-2 text-sm font-medium text-primary">ANON</span>
+              <div>
+                <div className="flex items-center justify-between">
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0"
+                    disabled={isProcessing}
+                    className="w-full bg-transparent font-mono text-3xl font-bold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="ml-2 text-sm font-medium text-primary">ANON</span>
+                </div>
+                {amount && formatUsdFromNumber(parseFloat(amount) || 0) && (
+                  <div className="text-sm text-muted-foreground">{formatUsdFromNumber(parseFloat(amount) || 0)}</div>
+                )}
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-primary/20 pt-3">
                 <div className="flex items-center gap-1.5">
                   <Wallet className="h-3 w-3 text-yellow-500" />
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Balance: {tokenBalance ? formatTokenAmount(tokenBalance) : '0'}
-                  </span>
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Balance: {tokenBalance ? formatTokenAmount(tokenBalance) : '0'} ANON
+                    </div>
+                    {tokenBalance && formatUsd(tokenBalance) && (
+                      <div className="text-xs text-muted-foreground">{formatUsd(tokenBalance)}</div>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={handleMaxClick}

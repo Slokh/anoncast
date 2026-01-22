@@ -8,6 +8,7 @@ import { ArrowRight, Loader2, Shield, Eye, Trash2, MessageSquare, Timer } from '
 import { IS_TESTNET, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
+import { useTokenPrice } from '@/hooks/use-token-price'
 import { BenchmarkModal } from './benchmark-modal'
 import { DepositModal } from './auction/deposit-modal'
 import { WithdrawModal } from './auction/withdraw-modal'
@@ -32,6 +33,7 @@ export function Header() {
   } = usePrivacyWallet()
 
   const { tokenBalance, formatTokenAmount, refetchBalance } = useDeposit()
+  const { formatUsd } = useTokenPrice()
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false)
@@ -229,10 +231,15 @@ export function Header() {
                       <Eye className="h-3 w-3 text-yellow-500" />
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Public</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono text-sm font-bold tabular-nums">
-                        {formatTokenAmount(walletBal)}
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-right">
+                        <div className="font-mono text-sm font-bold tabular-nums">
+                          {formatTokenAmount(walletBal)} ANON
+                        </div>
+                        {formatUsd(walletBal) && (
+                          <div className="text-[10px] text-muted-foreground">{formatUsd(walletBal)}</div>
+                        )}
+                      </div>
                       {isSyncing && (
                         <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
                       )}
@@ -255,9 +262,14 @@ export function Header() {
                       <Shield className="h-3 w-3 text-green-500" />
                       <span className="text-[10px] uppercase tracking-wider text-primary/70">Private</span>
                     </div>
-                    <span className="font-mono text-sm font-bold tabular-nums text-primary">
-                      {formatBalance(poolBal)}
-                    </span>
+                    <div className="text-right">
+                      <div className="font-mono text-sm font-bold tabular-nums text-primary">
+                        {formatBalance(poolBal)} ANON
+                      </div>
+                      {formatUsd(poolBal) && (
+                        <div className="text-[10px] text-primary/60">{formatUsd(poolBal)}</div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex w-full items-center justify-center gap-1 border-t border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70">
                     <ArrowRight className="h-3 w-3 rotate-180" />
