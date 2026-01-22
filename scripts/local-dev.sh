@@ -10,17 +10,68 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-CONTRACTS_DIR="$ROOT_DIR/packages/contracts"
+PROTOCOL_DIR="$ROOT_DIR/packages/protocol"
 WEB_DIR="$ROOT_DIR/apps/web"
 
 # Default to Base mainnet RPC
 DEFAULT_FORK_URL="https://mainnet.base.org"
 ANON_TOKEN="0x0Db510e79909666d6dEc7f5e49370838c16D950f"
 
+# Anvil test account #0
+TEST_ACCOUNT="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+TEST_PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+# Known whale address holding $ANON
+WHALE_ADDRESS="0x8117efF53BA83D42408570c69C6da85a2Bb6CA05"
+
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}   AnonPool Local Development Setup${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
+
+# Parse arguments
+FORK_URL="$DEFAULT_FORK_URL"
+FORK_BLOCK=""
+SKIP_CIRCUITS=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --fork)
+            FORK_URL="$2"
+            shift 2
+            ;;
+        --fork-block)
+            FORK_BLOCK="$2"
+            shift 2
+            ;;
+        --skip-circuits)
+            SKIP_CIRCUITS=true
+            shift
+            ;;
+        --help)
+            echo "Usage: ./scripts/local-dev.sh [options]"
+            echo ""
+            echo "Options:"
+            echo "  --fork <rpc-url>      Fork from a specific RPC (default: Base mainnet)"
+            echo "  --fork-block <num>    Fork from specific block number"
+            echo "  --skip-circuits       Skip circuit compilation (faster startup)"
+            echo "  --help                Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  ./scripts/local-dev.sh                           # Full setup"
+            echo "  ./scripts/local-dev.sh --skip-circuits           # Skip circuit build"
+            echo "  ./scripts/local-dev.sh --fork https://sepolia.base.org"
+            echo ""
+            echo "After setup, run e2e tests with:"
+            echo "  POOL_ADDRESS=0x... bun run test:e2e"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Unknown option: $1${NC}"
+            exit 1
+            ;;
+    esac
+done
 
 # Check dependencies
 check_dependency() {
@@ -41,49 +92,19 @@ check_dependency "bb"
 echo -e "${GREEN}✓ All dependencies found${NC}"
 echo ""
 
-# Regenerate verifiers to ensure vkey sync between client and contracts
-echo "Regenerating ZK verifiers..."
-cd "$ROOT_DIR/packages/pool"
-./scripts/generate-verifiers.sh 2>&1 | grep -E "(Processing|Generated|✓)" || true
-echo -e "${GREEN}✓ Verifiers regenerated${NC}"
-echo ""
-cd "$ROOT_DIR"
+# Build circuits and regenerate verifiers
+if [ "$SKIP_CIRCUITS" = true ]; then
+    echo -e "${YELLOW}Skipping circuit compilation (--skip-circuits)${NC}"
+    echo ""
+else
+    echo "Building circuits and regenerating verifiers..."
+    cd "$ROOT_DIR"
+    bun run build:circuits 2>&1 | grep -E "(Processing|Generated|✓|Compiling)" || true
+    echo -e "${GREEN}✓ Circuits built and verifiers regenerated${NC}"
+    echo ""
+fi
 
-# Parse arguments
-FORK_URL="$DEFAULT_FORK_URL"
-FORK_BLOCK=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --fork)
-            FORK_URL="$2"
-            shift 2
-            ;;
-        --fork-block)
-            FORK_BLOCK="$2"
-            shift 2
-            ;;
-        --help)
-            echo "Usage: ./scripts/local-dev.sh [options]"
-            echo ""
-            echo "Options:"
-            echo "  --fork <rpc-url>      Fork from a specific RPC (default: Base mainnet)"
-            echo "  --fork-block <num>    Fork from specific block number"
-            echo "  --help                Show this help message"
-            echo ""
-            echo "Examples:"
-            echo "  ./scripts/local-dev.sh                           # Fork Base mainnet"
-            echo "  ./scripts/local-dev.sh --fork https://sepolia.base.org  # Fork Base Sepolia"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Unknown option: $1${NC}"
-            exit 1
-            ;;
-    esac
-done
-
-# Build Anvil command - always fork Base mainnet by default
-# --auto-impersonate allows sending txs from any account without unlocking first
+# Build Anvil command
 ANVIL_CMD="anvil --host 0.0.0.0 --auto-impersonate --fork-url $FORK_URL"
 
 echo -e "${YELLOW}Forking from: $FORK_URL${NC}"
@@ -91,7 +112,6 @@ if [ -n "$FORK_BLOCK" ]; then
     ANVIL_CMD="$ANVIL_CMD --fork-block-number $FORK_BLOCK"
     echo -e "${YELLOW}At block: $FORK_BLOCK${NC}"
 fi
-
 echo ""
 
 # Kill any existing Anvil process
@@ -125,27 +145,20 @@ CHAIN_ID=$(cast chain-id --rpc-url http://127.0.0.1:8545)
 echo -e "${GREEN}✓ Anvil running (Chain ID: $CHAIN_ID, PID: $ANVIL_PID)${NC}"
 echo ""
 
-# Fund test accounts with $ANON tokens
-echo "Funding test accounts with \$ANON tokens..."
-
-# Known whale address holding $ANON
-WHALE_ADDRESS="0x8117efF53BA83D42408570c69C6da85a2Bb6CA05"
-TEST_ACCOUNT="0x333601a803CAc32B7D17A38d32c9728A93b422f4"
+# Fund test account with $ANON tokens
+echo "Funding test account with \$ANON tokens..."
 TRANSFER_AMOUNT="1000000000000000000000" # 1,000 ANON (18 decimals)
 
-# Check whale balance first
 WHALE_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $WHALE_ADDRESS --rpc-url http://127.0.0.1:8545 2>/dev/null || echo "0")
 echo "  Whale balance: $WHALE_BALANCE"
 
 if [ "$WHALE_BALANCE" != "0" ]; then
-    # Transfer tokens from whale to test account using impersonation
     cast send $ANON_TOKEN "transfer(address,uint256)(bool)" $TEST_ACCOUNT $TRANSFER_AMOUNT \
         --from $WHALE_ADDRESS \
         --unlocked \
         --rpc-url http://127.0.0.1:8545 \
         &> /dev/null
 
-    # Verify transfer
     TEST_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $TEST_ACCOUNT --rpc-url http://127.0.0.1:8545)
     echo -e "${GREEN}✓ Transferred 1,000 \$ANON to test account${NC}"
     echo "  Test account balance: $TEST_BALANCE"
@@ -157,9 +170,8 @@ echo ""
 
 # Deploy contracts
 echo "Deploying contracts..."
-cd "$CONTRACTS_DIR"
+cd "$PROTOCOL_DIR"
 
-# Run deployment and capture output
 DEPLOY_OUTPUT=$(forge script script/DeployLocal.s.sol:DeployLocal \
     --rpc-url http://127.0.0.1:8545 \
     --broadcast \
@@ -176,71 +188,75 @@ if [ -z "$POOL_ADDRESS" ]; then
     exit 1
 fi
 
+cd "$ROOT_DIR"
+
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}   Deployment Complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
-# Create/update .env.local for the web app
-ENV_FILE="$WEB_DIR/.env.local"
-ENV_CONTENT="# Local Development Configuration (Base mainnet fork)
-# Generated by scripts/local-dev.sh at $(date)
+# Update root .env file with contract addresses
+ENV_FILE="$ROOT_DIR/.env"
 
-NEXT_PUBLIC_TESTNET=true
-NEXT_PUBLIC_TESTNET_RPC_URL=http://127.0.0.1:8545
-NEXT_PUBLIC_POOL_CONTRACT=$POOL_ADDRESS
-NEXT_PUBLIC_AUCTION_CONTRACT=$AUCTION_ADDRESS
+# Create .env from .env.example if it doesn't exist
+if [ ! -f "$ENV_FILE" ]; then
+    if [ -f "$ROOT_DIR/.env.example" ]; then
+        cp "$ROOT_DIR/.env.example" "$ENV_FILE"
+        echo -e "${YELLOW}Created .env from .env.example${NC}"
+    else
+        echo -e "${RED}Error: .env.example not found${NC}"
+        exit 1
+    fi
+fi
 
-# Using real \$ANON token from Base mainnet
-# ANON_TOKEN=$ANON_TOKEN
+# Update .env with local development values (preserves other settings)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS sed requires empty string for -i
+    sed -i '' "s|^NEXT_PUBLIC_RPC_URL=.*|NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545|" "$ENV_FILE"
+    sed -i '' "s|^NEXT_PUBLIC_POOL_CONTRACT=.*|NEXT_PUBLIC_POOL_CONTRACT=$POOL_ADDRESS|" "$ENV_FILE"
+    sed -i '' "s|^NEXT_PUBLIC_AUCTION_CONTRACT=.*|NEXT_PUBLIC_AUCTION_CONTRACT=$AUCTION_ADDRESS|" "$ENV_FILE"
+else
+    # Linux sed
+    sed -i "s|^NEXT_PUBLIC_RPC_URL=.*|NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545|" "$ENV_FILE"
+    sed -i "s|^NEXT_PUBLIC_POOL_CONTRACT=.*|NEXT_PUBLIC_POOL_CONTRACT=$POOL_ADDRESS|" "$ENV_FILE"
+    sed -i "s|^NEXT_PUBLIC_AUCTION_CONTRACT=.*|NEXT_PUBLIC_AUCTION_CONTRACT=$AUCTION_ADDRESS|" "$ENV_FILE"
+fi
 
-# Add your API keys below
-# NEYNAR_API_KEY=
-# NEYNAR_SIGNER_UUID=
-# UPLOAD_API_KEY=
-"
-
-echo -e "${YELLOW}Creating $ENV_FILE...${NC}"
-echo "$ENV_CONTENT" > "$ENV_FILE"
-echo -e "${GREEN}✓ Environment file created${NC}"
+echo -e "${GREEN}✓ Updated $ENV_FILE with contract addresses${NC}"
 echo ""
 
 # Print summary
 echo -e "${BLUE}Contract Addresses:${NC}"
-echo "  \$ANON:    $ANON_TOKEN (real token from Base mainnet)"
-echo "  Pool:     $POOL_ADDRESS"
-echo "  Auction:  $AUCTION_ADDRESS"
+echo "  \$ANON Token:  $ANON_TOKEN"
+echo "  AnonPool:     $POOL_ADDRESS"
+echo "  Auction:      $AUCTION_ADDRESS"
 echo ""
-echo -e "${BLUE}Anvil Info:${NC}"
-echo "  RPC URL:  http://127.0.0.1:8545"
-echo "  Chain ID: $CHAIN_ID"
-echo "  PID:      $ANVIL_PID"
-echo ""
-echo -e "${BLUE}Funded Account:${NC}"
+
+echo -e "${BLUE}Test Account (Anvil #0):${NC}"
 echo "  Address:  $TEST_ACCOUNT"
-FINAL_ANON_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $TEST_ACCOUNT --rpc-url http://127.0.0.1:8545 2>/dev/null || echo "0")
-FORMATTED_BALANCE=$(echo "scale=0; $FINAL_ANON_BALANCE / 1000000000000000000" | bc 2>/dev/null || echo "unknown")
+echo "  Key:      $TEST_PRIVATE_KEY"
+FINAL_BALANCE=$(cast call $ANON_TOKEN "balanceOf(address)(uint256)" $TEST_ACCOUNT --rpc-url http://127.0.0.1:8545 2>/dev/null || echo "0")
+FORMATTED_BALANCE=$(echo "scale=0; $FINAL_BALANCE / 1000000000000000000" | bc 2>/dev/null || echo "?")
 echo "  \$ANON:    $FORMATTED_BALANCE tokens"
-echo ""
-echo -e "${BLUE}Anvil Test Account (Account #0):${NC}"
-echo "  Address:  0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-echo "  Key:      0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 echo "  ETH:      10,000 ETH"
 echo ""
 
-echo -e "${YELLOW}To start the frontend:${NC}"
-echo "  cd apps/web && bun run dev"
+echo -e "${BLUE}Anvil:${NC}"
+echo "  RPC URL:  http://127.0.0.1:8545"
+echo "  Chain ID: $CHAIN_ID"
+echo "  PID:      $ANVIL_PID"
+echo "  Logs:     tail -f /tmp/anvil.log"
 echo ""
-echo -e "${YELLOW}To stop Anvil:${NC}"
-echo "  kill $ANVIL_PID"
-echo ""
-echo -e "${YELLOW}Anvil logs:${NC}"
-echo "  tail -f /tmp/anvil.log"
+
+echo -e "${YELLOW}Next steps:${NC}"
+echo "  Start frontend:  bun run dev"
+echo "  Run e2e tests:   POOL_ADDRESS=$POOL_ADDRESS bun run test:e2e"
+echo "  Stop Anvil:      kill $ANVIL_PID"
 echo ""
 
 # Keep script running and show Anvil output
-echo -e "${GREEN}Anvil is running in the background. Press Ctrl+C to stop.${NC}"
+echo -e "${GREEN}Anvil is running. Press Ctrl+C to stop.${NC}"
 echo ""
 
 # Trap Ctrl+C to clean up

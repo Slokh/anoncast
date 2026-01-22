@@ -4,71 +4,23 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useAccount, useSignMessage } from 'wagmi'
 import { formatUnits, toHex, pad } from 'viem'
 import { CONTRACTS, RPC_URL } from '@/config/chains'
+import {
+  FRESHNESS_THRESHOLDS,
+  getRootFreshnessStatus,
+  PrivacyWallet,
+  type RootFreshness,
+  type Note,
+  type WalletBalance,
+  type TransferPreparation,
+} from '@anon/sdk/core'
+import { ANON_POOL_ABI } from '@anon/sdk/config'
+import type { WithdrawPreparation } from '@anon/sdk/blockchain'
 
 // Contract addresses from config
 const POOL_CONTRACT = CONTRACTS.POOL
 
-// Proof freshness thresholds
-const FRESHNESS_THRESHOLDS = {
-  SAFE: 100,      // > 100 deposits until expiry = safe
-  WARNING: 50,    // 50-100 = warning
-  URGENT: 10,     // 10-50 = urgent
-  CRITICAL: 0,    // < 10 = critical
-} as const
-
-// ABI for getRootStatus
-const GET_ROOT_STATUS_ABI = [
-  {
-    name: 'getRootStatus',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'root', type: 'bytes32' }],
-    outputs: [
-      { name: 'exists', type: 'bool' },
-      { name: 'depositsAgo', type: 'uint32' },
-      { name: 'depositsUntilExpiry', type: 'uint32' },
-    ],
-  },
-] as const
-
-export type RootFreshness = {
-  exists: boolean
-  depositsAgo: number
-  depositsUntilExpiry: number
-  status: 'safe' | 'warning' | 'urgent' | 'critical' | 'expired'
-  message: string
-}
-
-type Note = {
-  secret: bigint
-  nullifier: bigint
-  commitment: bigint
-  amount: bigint
-  leafIndex: number
-  timestamp: number
-}
-
-type WalletBalance = {
-  total: bigint
-  available: bigint
-  pending: bigint
-  noteCount: number
-}
-
-type TransferPreparation = {
-  inputNote: Note
-  changeNote: { secret: bigint; nullifier: bigint; commitment: bigint; amount: bigint }
-  changeIndex: number
-  outputCommitment: bigint
-  merkleProof: { path: bigint[]; indices: number[]; root: bigint }
-  nullifierHash: bigint
-}
-
-type WithdrawPreparation = {
-  inputNote: Note
-  merkleProof: { path: bigint[]; indices: number[]; root: bigint }
-  nullifierHash: bigint
-}
+// Re-export for backwards compatibility
+export type { RootFreshness, Note, WalletBalance, TransferPreparation, WithdrawPreparation }
 
 type PrivacyWalletContextValue = {
   // State
@@ -89,7 +41,7 @@ type PrivacyWalletContextValue = {
   clearWallet: () => Promise<void>
   clearStoredSignature: () => void
   clearAllData: () => void
-  generateDeposit: (amount: bigint) => { commitment: bigint; note: any } | null
+  generateDeposit: (amount: bigint) => { commitment: bigint; note: Omit<Note, 'leafIndex' | 'timestamp'> & { index: number } } | null
   prepareTransfer: (outputAmount: bigint, outputCommitment: bigint) => Promise<TransferPreparation | null>
   prepareTransferWithFreshnessCheck: (outputAmount: bigint, outputCommitment: bigint) => Promise<{
     preparation: TransferPreparation | null
@@ -112,8 +64,8 @@ const PrivacyWalletContext = createContext<PrivacyWalletContextValue | null>(nul
 
 // Lazy load the privacy wallet module
 async function loadPrivacyWallet() {
-  const module = await import('@anon/pool/privacy-wallet')
-  return module
+  const walletModule = await import('@anon/sdk/core/privacy-wallet')
+  return walletModule
 }
 
 // Storage keys
@@ -138,7 +90,7 @@ function loadSignature(address: string): string | null {
       return data.signature
     }
     return null
-  } catch (err) {
+  } catch {
     return null
   }
 }
@@ -164,7 +116,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   // Store wallet instance in ref-like state
-  const [walletInstance, setWalletInstance] = useState<any>(null)
+  const [walletInstance, setWalletInstance] = useState<PrivacyWallet | null>(null)
   const [hasStoredSignature, setHasStoredSignature] = useState(false)
 
   // Check for existing signature on mount and auto-restore if available
@@ -339,7 +291,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
    * Generate a deposit note
    */
   const generateDeposit = useCallback(
-    (amount: bigint): { commitment: bigint; note: any } | null => {
+    (amount: bigint): { commitment: bigint; note: Omit<Note, 'leafIndex' | 'timestamp'> & { index: number } } | null => {
       if (!walletInstance) return null
 
       const { note, index } = walletInstance.generateDepositNote(amount)
@@ -403,7 +355,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
       const merkleProof = walletInstance.getMerkleProof(inputNote.leafIndex)
 
       // Compute nullifier hash
-      const { computeNullifierHash } = await import('@anon/pool/transfer')
+      const { computeNullifierHash } = await import('@anon/sdk/core/transfer')
       const nullifierHash = computeNullifierHash(inputNote.nullifier)
 
       return {
@@ -528,33 +480,15 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
 
         const result = await client.readContract({
           address: POOL_CONTRACT as `0x${string}`,
-          abi: GET_ROOT_STATUS_ABI,
+          abi: ANON_POOL_ABI,
           functionName: 'getRootStatus',
           args: [rootBytes],
         })
 
         const [exists, depositsAgo, depositsUntilExpiry] = result as [boolean, number, number]
 
-        // Determine status and message
-        let status: RootFreshness['status']
-        let message: string
-
-        if (!exists) {
-          status = 'expired'
-          message = 'This proof has expired. Please regenerate with the current merkle root.'
-        } else if (depositsUntilExpiry > FRESHNESS_THRESHOLDS.SAFE) {
-          status = 'safe'
-          message = `Proof is fresh (${depositsUntilExpiry} deposits until expiry)`
-        } else if (depositsUntilExpiry > FRESHNESS_THRESHOLDS.WARNING) {
-          status = 'warning'
-          message = `Proof will expire soon (${depositsUntilExpiry} deposits remaining). Consider regenerating.`
-        } else if (depositsUntilExpiry > FRESHNESS_THRESHOLDS.CRITICAL) {
-          status = 'urgent'
-          message = `Proof expiring very soon! Only ${depositsUntilExpiry} deposits until expiry. Regenerate now.`
-        } else {
-          status = 'critical'
-          message = `Proof about to expire! Less than 10 deposits until expiry. Regenerate immediately.`
-        }
+        // Get status and message from SDK helper
+        const { status, message } = getRootFreshnessStatus(exists, depositsUntilExpiry)
 
         return {
           exists,

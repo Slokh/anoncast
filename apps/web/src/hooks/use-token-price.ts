@@ -64,6 +64,7 @@ export function useTokenPrice() {
   // Format a bigint token amount to USD string
   const formatUsd = useCallback((amount: bigint): string => {
     if (!price?.priceUsd) return ''
+    if (amount === 0n) return '$0.00'
     const tokenAmount = parseFloat(formatUnits(amount, TOKEN_DECIMALS))
     const usdValue = tokenAmount * price.priceUsd
 
@@ -77,6 +78,7 @@ export function useTokenPrice() {
   // Format a number (already in token units) to USD string
   const formatUsdFromNumber = useCallback((amount: number): string => {
     if (!price?.priceUsd) return ''
+    if (amount === 0) return '$0.00'
     const usdValue = amount * price.priceUsd
 
     if (usdValue < 0.01) return '<$0.01'

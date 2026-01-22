@@ -5,12 +5,12 @@ import { writeFile, readFile, mkdir, rm, copyFile } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
-import { keccak256, toHex, pad } from 'viem'
+import { computeNullifierHash } from '@anon/sdk/core'
 
 const execAsync = promisify(exec)
 
 // Path to the circuit directory (relative to apps/web)
-const CIRCUIT_DIR = join(process.cwd(), '../../packages/pool/src/circuits/withdraw')
+const CIRCUIT_DIR = join(process.cwd(), '../../packages/protocol/circuits/withdraw')
 
 // BN254 field modulus - all values must be less than this
 const FIELD_MODULUS = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617')
@@ -19,15 +19,6 @@ const FIELD_MODULUS = BigInt('21888242871839275222246405745257275088548364400416
 function toField(value: bigint): bigint {
   const v = value < 0n ? -value : value
   return v >= FIELD_MODULUS ? v % FIELD_MODULUS : v
-}
-
-// Compute nullifier hash (keccak256) - must match circuit implementation
-// Reduces result modulo field to ensure it's valid for the circuit
-function computeNullifierHash(nullifier: bigint): bigint {
-  const nullifierBytes = pad(toHex(nullifier), { size: 32 })
-  const hash = keccak256(nullifierBytes)
-  // Reduce modulo field to ensure it fits within BN254
-  return toField(BigInt(hash))
 }
 
 // Format a bigint as a hex string for Prover.toml
@@ -93,29 +84,18 @@ recipient = ${toTomlHex(recipientBigInt)}
     // Write Prover.toml to work directory
     await writeFile(join(workDir, 'Prover.toml'), proverToml)
 
-    console.log(`[API] Work dir: ${workDir}`)
-    console.log(`[API] Prover.toml:\n${proverToml}`)
-
     // Step 1: Generate witness using nargo
-    console.log('[API] Generating witness with nargo...')
     const witnessStartTime = performance.now()
 
-    const { stdout: nargoOut, stderr: nargoErr } = await execAsync(
+    const { stdout: _nargoOut, stderr: _nargoErr } = await execAsync(
       `cd ${workDir} && nargo execute witness`,
       { timeout: 30000 }
     )
 
-    if (nargoErr && !nargoErr.includes('Witness saved')) {
-      console.log('[API] nargo stderr:', nargoErr)
-    }
-
     const witnessGenTime = performance.now() - witnessStartTime
-    console.log(`[API] Witness generated in ${witnessGenTime.toFixed(0)}ms`)
-
     const witnessPath = join(workDir, 'target/witness.gz')
 
     // Step 2: Generate proof using bb
-    console.log('[API] Generating proof with bb...')
     const proofStartTime = performance.now()
 
     const proofOutputDir = join(workDir, 'proof_output')
@@ -123,19 +103,14 @@ recipient = ${toTomlHex(recipientBigInt)}
     const bytecodePath = join(workDir, 'target/anon_withdraw.json')
 
     // Also write the verification key for verification
-    const vkPath = join(CIRCUIT_DIR, 'target/vk')
+    const _vkPath = join(CIRCUIT_DIR, 'target/vk')
 
-    const { stdout: bbOut, stderr: bbErr } = await execAsync(
+    const { stdout: _bbOut, stderr: _bbErr } = await execAsync(
       `bb prove -s ultra_honk --oracle_hash keccak --output_format bytes -b ${bytecodePath} -w ${witnessPath} -o ${proofOutputDir} --write_vk`,
       { timeout: 120000 }
     )
 
-    if (bbErr) {
-      console.log('[API] bb stderr:', bbErr)
-    }
-
     const proofGenerationTime = performance.now() - proofStartTime
-    console.log(`[API] Proof generated in ${proofGenerationTime.toFixed(0)}ms`)
 
     // Read the proof from the output directory (bb writes to proof_output/proof)
     const rawProofBytes = await readFile(join(proofOutputDir, 'proof'))
@@ -147,32 +122,19 @@ recipient = ${toTomlHex(recipientBigInt)}
     const PUBLIC_INPUTS_SIZE = 4 * 32  // 4 public inputs, each 32 bytes
     const EXPECTED_PROOF_SIZE = 440 * 32  // 14080 bytes
 
-    console.log(`[API] Raw bb output size: ${rawProofBytes.length} bytes`)
-    console.log(`[API] Expected: ${HEADER_SIZE} + ${PUBLIC_INPUTS_SIZE} + ${EXPECTED_PROOF_SIZE} = ${HEADER_SIZE + PUBLIC_INPUTS_SIZE + EXPECTED_PROOF_SIZE}`)
-
     // Strip header and public inputs to get just the proof
     const proofBytes = rawProofBytes.slice(HEADER_SIZE + PUBLIC_INPUTS_SIZE)
     const proof = Array.from(proofBytes)
-
-    console.log(`[API] Stripped proof size: ${proof.length} bytes (expected: ${EXPECTED_PROOF_SIZE})`)
 
     if (proof.length !== EXPECTED_PROOF_SIZE) {
       throw new Error(`Proof size mismatch: got ${proof.length}, expected ${EXPECTED_PROOF_SIZE}`)
     }
 
-    console.log(`[API] First 64 bytes: ${proof.slice(0, 64).join(',')}`)
-    console.log(`[API] Last 64 bytes: ${proof.slice(-64).join(',')}`)
-
-    // Verify the proof locally to ensure it's valid
-    console.log('[API] Verifying proof locally...')
-    const { stdout: verifyOut, stderr: verifyErr } = await execAsync(
+    // Verify the proof locally to ensure it's valid before returning
+    await execAsync(
       `bb verify -s ultra_honk --oracle_hash keccak -k ${join(proofOutputDir, 'vk')} -p ${join(proofOutputDir, 'proof')}`,
       { timeout: 30000 }
     )
-    console.log('[API] Verification result:', verifyOut || 'success')
-    if (verifyErr) {
-      console.log('[API] Verification stderr:', verifyErr)
-    }
 
     // Clean up work directory
     await rm(workDir, { recursive: true, force: true })
@@ -198,20 +160,21 @@ recipient = ${toTomlHex(recipientBigInt)}
         totalTime,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API] Proof generation error:', error)
-    console.error('[API] stdout:', error.stdout)
-    console.error('[API] stderr:', error.stderr)
+    const execError = error as { stdout?: string; stderr?: string }
 
     // Clean up on error
     try {
       await rm(workDir, { recursive: true, force: true })
-    } catch {}
+    } catch {
+      // Ignore cleanup errors
+    }
 
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Proof generation failed',
-        details: error.stderr || error.stdout,
+        details: execError.stderr || execError.stdout,
       },
       { status: 500 }
     )

@@ -1,0 +1,19 @@
+{
+  "name": "@anon/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "build:circuits": "./script/build-circuits.sh",
+    "test": "forge test",
+    "test:circuits": "cd circuits/transfer && nargo test && cd ../withdraw && nargo test",
+    "deploy:local": "forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://127.0.0.1:8545 --broadcast",
+    "deploy:mainnet": "forge script script/Deploy.s.sol:DeployMainnet --rpc-url base --broadcast --verify"
+  },
+  "exports": {
+    "./circuits/withdraw/target/anon_withdraw.json": "./circuits/withdraw/target/anon_withdraw.json",
+    "./circuits/withdraw/target/vk.json": "./circuits/withdraw/target/vk.json",
+    "./circuits/transfer/target/anon_transfer.json": "./circuits/transfer/target/anon_transfer.json",
+    "./circuits/transfer/target/vk.json": "./circuits/transfer/target/vk.json"
+  }
+}

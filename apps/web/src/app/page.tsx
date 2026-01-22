@@ -2,7 +2,6 @@ import { Shield } from 'lucide-react'
 import { Header } from '@/components/header'
 import { PostForm } from '@/components/auction/post-form'
 import { AuctionTimer } from '@/components/auction/auction-timer'
-import { PoolStats } from '@/components/pool-stats'
 
 export default function Home() {
   return (

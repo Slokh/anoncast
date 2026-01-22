@@ -1,0 +1,30 @@
+{
+  "name": "@anon/sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core/index.ts",
+    "./core/transfer": "./src/core/transfer.ts",
+    "./core/withdraw": "./src/core/withdraw.ts",
+    "./core/privacy-wallet": "./src/core/privacy-wallet.ts",
+    "./config": "./src/config/index.ts",
+    "./prover": "./src/prover/index.ts",
+    "./blockchain": "./src/blockchain/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@anon/protocol": "workspace:*",
+    "@aztec/bb.js": "0.82.2",
+    "@noir-lang/noir_js": "1.0.0-beta.3",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

@@ -19,16 +19,18 @@ export const PROOF_MODE_INFO = {
   },
 } as const
 
-export function useProofMode() {
-  const [mode, setModeState] = useState<ProverMode>(DEFAULT_MODE)
+// Helper to get initial mode from localStorage
+function getInitialMode(): ProverMode {
+  if (typeof window === 'undefined') return DEFAULT_MODE
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored && VALID_MODES.includes(stored as ProverMode)) {
+    return stored as ProverMode
+  }
+  return DEFAULT_MODE
+}
 
-  // Sync from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored && VALID_MODES.includes(stored as ProverMode)) {
-      setModeState(stored as ProverMode)
-    }
-  }, [])
+export function useProofMode() {
+  const [mode, setModeState] = useState<ProverMode>(getInitialMode)
 
   // Listen for changes from other components
   useEffect(() => {

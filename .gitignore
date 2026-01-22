@@ -34,3 +34,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 exports
+
+# Foundry
+cache/
+broadcast/*/31337/
+broadcast/*/8453/
+broadcast/**/dry-run/

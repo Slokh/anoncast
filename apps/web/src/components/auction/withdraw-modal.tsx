@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { formatUnits } from 'viem'
 import {
   Dialog,
@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import {
   CheckCircle,
   AlertCircle,
@@ -23,21 +22,8 @@ import { TOKEN_DECIMALS } from '@/config/chains'
 import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
 import { useTokenPrice } from '@/hooks/use-token-price'
 import type { ProverMode } from '@/lib/prover'
-
-type Note = {
-  secret: bigint
-  nullifier: bigint
-  commitment: bigint
-  amount: bigint
-  leafIndex: number
-  timestamp: number
-}
-
-type WithdrawPreparation = {
-  inputNote: Note
-  merkleProof: { path: bigint[]; indices: number[]; root: bigint }
-  nullifierHash: bigint
-}
+import type { Note } from '@anon/sdk/core'
+import type { WithdrawPreparation } from '@anon/sdk/blockchain'
 
 type Props = {
   open: boolean
@@ -80,14 +66,11 @@ export function WithdrawModal({
     return [...notes].sort((a, b) => Number(b.amount - a.amount))
   }, [notes])
 
-  // Auto-select the largest note when modal opens
-  useEffect(() => {
-    if (open && availableNotes.length > 0 && selectedNoteIndex === null) {
-      setSelectedNoteIndex(0)
-    }
-  }, [open, availableNotes, selectedNoteIndex])
+  // Derive effective selected index - default to 0 (largest) if none selected
+  // Note: selectedNoteIndex is reset in handleClose when the modal closes
+  const effectiveSelectedIndex = selectedNoteIndex ?? (availableNotes.length > 0 ? 0 : null)
 
-  const selectedNote = selectedNoteIndex !== null ? availableNotes[selectedNoteIndex] : null
+  const selectedNote = effectiveSelectedIndex !== null ? availableNotes[effectiveSelectedIndex] : null
   const canWithdraw = selectedNote && (state === 'idle' || state === 'error')
 
   const handleWithdraw = useCallback(async () => {

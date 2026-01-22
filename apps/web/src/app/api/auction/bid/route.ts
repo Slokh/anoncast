@@ -7,7 +7,7 @@ import {
 } from '@/lib/auction-store'
 
 // TODO: Import auction verifier once circuit is compiled
-// import { AuctionVerifier } from '@anon/pool/auction'
+// import { AuctionVerifier } from '@anon/sdk/core/auction'
 
 type BidRequest = {
   content: string

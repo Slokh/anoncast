@@ -41,19 +41,17 @@ export function PostForm() {
 
   const {
     isUnlocked,
-    balance,
     error: walletError,
     sync,
     prepareTransfer,
     canAffordTransfer,
     getClaimCredentials,
     markNoteSpent,
-    formatBalance,
     generateDeposit,
   } = usePrivacyWallet()
 
   const { tokenBalance } = useDeposit()
-  const { formatUsd, formatUsdFromNumber } = useTokenPrice()
+  const { formatUsdFromNumber } = useTokenPrice()
 
   // Form state
   const [text, setText] = useState('')

@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { ArrowRight, Loader2, Shield, Eye, Trash2, MessageSquare, Timer } from 'lucide-react'
-import { IS_TESTNET, NETWORK_NAME } from '@/config/chains'
+import { Loader2, Shield, Eye, Trash2, MessageSquare, Timer, Coins } from 'lucide-react'
+import { IS_LOCAL, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
 import { useTokenPrice } from '@/hooks/use-token-price'
@@ -14,7 +14,7 @@ import { DepositModal } from './auction/deposit-modal'
 import { WithdrawModal } from './auction/withdraw-modal'
 
 export function Header() {
-  const { isConnected } = useAccount()
+  const { isConnected, address } = useAccount()
   const {
     isUnlocked,
     isLoading: walletLoading,
@@ -39,6 +39,34 @@ export function Header() {
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false)
   const [pendingUnlock, setPendingUnlock] = useState(false)
   const [mockBidType, setMockBidType] = useState<string>('none')
+  const [faucetLoading, setFaucetLoading] = useState(false)
+
+  // Request tokens from faucet (local dev only)
+  const requestFaucet = useCallback(async () => {
+    if (!address || faucetLoading) return
+
+    setFaucetLoading(true)
+    try {
+      const res = await fetch('/api/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: address }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Faucet request failed')
+      }
+
+      // Refresh balance after successful faucet
+      await refetchBalance()
+    } catch (err) {
+      console.error('Faucet error:', err)
+      alert(err instanceof Error ? err.message : 'Failed to get tokens')
+    } finally {
+      setFaucetLoading(false)
+    }
+  }, [address, faucetLoading, refetchBalance])
 
   // Sync mock bid type from localStorage
   useEffect(() => {
@@ -96,11 +124,26 @@ export function Header() {
 
   return (
     <>
-      {/* Testnet Banner */}
-      {IS_TESTNET && (
+      {/* Dev Mode Banner - shows when running locally */}
+      {IS_LOCAL && (
         <div className="flex items-center justify-between bg-yellow-500/20 px-4 py-1 text-xs font-medium text-yellow-600">
-          <span>{NETWORK_NAME} Testnet</span>
+          <span>{NETWORK_NAME}</span>
           <div className="flex items-center gap-2">
+            {address && (
+              <button
+                onClick={requestFaucet}
+                disabled={faucetLoading}
+                className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30 disabled:opacity-50"
+                title="Get 1000 ANON from faucet"
+              >
+                {faucetLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Coins className="h-3 w-3" />
+                )}
+                <span>Get 1000 ANON</span>
+              </button>
+            )}
             <button
               onClick={() => setShowBenchmarkModal(true)}
               className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
@@ -220,12 +263,8 @@ export function Header() {
           {isFullyConnected && (
             <div className="border-t border-border/50 bg-black/20 p-2">
               <div className="flex items-stretch gap-2">
-                {/* Public Balance - Deposit */}
-                <button
-                  onClick={() => setShowDepositModal(true)}
-                  disabled={walletBal === 0n}
-                  className="flex-1 cursor-pointer overflow-hidden rounded-lg bg-white/5 text-left transition-all hover:scale-[1.02] hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-                >
+                {/* Public Balance */}
+                <div className="flex-1 overflow-hidden rounded-lg bg-white/5">
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <Eye className="h-3 w-3 text-yellow-500" />
@@ -245,18 +284,28 @@ export function Header() {
                       )}
                     </div>
                   </div>
-                  <div className="flex w-full items-center justify-center gap-1 border-t border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    <ArrowRight className="h-3 w-3" />
-                    Deposit
+                  <div className="flex border-t border-white/10">
+                    <a
+                      href="https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-1 items-center justify-center gap-1 bg-white/5 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10"
+                    >
+                      Buy
+                    </a>
+                    <a
+                      href="https://app.uniswap.org/swap?inputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-1 items-center justify-center gap-1 border-l border-white/10 bg-white/5 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10"
+                    >
+                      Sell
+                    </a>
                   </div>
-                </button>
+                </div>
 
-                {/* Private Balance - Withdraw */}
-                <button
-                  onClick={() => setShowWithdrawModal(true)}
-                  disabled={poolBal === 0n}
-                  className="flex-1 cursor-pointer overflow-hidden rounded-lg bg-primary/10 text-left ring-1 ring-primary/30 transition-all hover:scale-[1.02] hover:bg-primary/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-                >
+                {/* Private Balance */}
+                <div className="flex-1 overflow-hidden rounded-lg bg-primary/10 ring-1 ring-primary/30">
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <Shield className="h-3 w-3 text-green-500" />
@@ -271,26 +320,29 @@ export function Header() {
                       )}
                     </div>
                   </div>
-                  <div className="flex w-full items-center justify-center gap-1 border-t border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70">
-                    <ArrowRight className="h-3 w-3 rotate-180" />
-                    Withdraw
+                  <div className="flex border-t border-primary/20">
+                    <button
+                      onClick={() => setShowDepositModal(true)}
+                      disabled={walletBal === 0n}
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-1 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Deposit
+                    </button>
+                    <button
+                      onClick={() => setShowWithdrawModal(true)}
+                      disabled={poolBal === 0n}
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-1 border-l border-primary/20 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Withdraw
+                    </button>
                   </div>
-                </button>
+                </div>
               </div>
 
               {/* Get tokens hint */}
               {walletBal === 0n && poolBal === 0n && (
-                <div className="mt-3 rounded-lg bg-white/5 p-2 text-center text-xs text-muted-foreground">
-                  Get ANON on{' '}
-                  <a
-                    href="https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    Uniswap
-                  </a>{' '}
-                  to get started
+                <div className="mt-2 text-center text-[10px] text-muted-foreground">
+                  Buy ANON to get started
                 </div>
               )}
             </div>

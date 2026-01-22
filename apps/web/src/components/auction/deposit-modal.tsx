@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import {
   CheckCircle,
   AlertCircle,
@@ -21,11 +20,21 @@ import { useDeposit } from '@/hooks/use-deposit'
 import { TOKEN_DECIMALS } from '@/config/chains'
 import { useTokenPrice } from '@/hooks/use-token-price'
 
+// Note returned by generateDeposit (before on-chain confirmation)
+// leafIndex and timestamp are set after the deposit is confirmed
+type DepositNote = {
+  commitment: bigint
+  secret: bigint
+  nullifier: bigint
+  amount: bigint
+  index: number
+}
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
-  generateDeposit: (amount: bigint) => { commitment: bigint; note: any } | null
+  generateDeposit: (amount: bigint) => { commitment: bigint; note: DepositNote } | null
   sync: () => Promise<void>
 }
 

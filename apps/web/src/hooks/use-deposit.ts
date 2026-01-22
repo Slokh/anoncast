@@ -5,7 +5,6 @@ import {
   useAccount,
   useReadContract,
   useWriteContract,
-  useWaitForTransactionReceipt,
 } from 'wagmi'
 import { parseUnits, formatUnits, pad, toHex } from 'viem'
 import { CONTRACTS, TOKEN_DECIMALS } from '@/config/chains'
@@ -65,7 +64,7 @@ export function useDeposit() {
   const deposit = useCallback(
     async (
       amount: bigint,
-      generateCommitment: () => { commitment: bigint; note: any; index: number }
+      generateCommitment: () => { commitment: bigint; index: number }
     ): Promise<DepositResult | null> => {
       if (!address || !CONTRACTS.POOL || !CONTRACTS.ANON_TOKEN) {
         setError('Wallet not connected or contracts not configured')
@@ -85,35 +84,18 @@ export function useDeposit() {
         if (currentAllowance < amount) {
           setState('approving')
 
-          const approveTxHash = await writeContractAsync({
+          await writeContractAsync({
             address: CONTRACTS.ANON_TOKEN,
             abi: ERC20_ABI,
             functionName: 'approve',
             args: [CONTRACTS.POOL, amount],
           })
 
-          setState('waiting_approval')
-
-          // Wait for approval to be mined
-          // In production, you'd use useWaitForTransactionReceipt
-          // For now, we'll poll
-          let approved = false
-          for (let i = 0; i < 30; i++) {
-            await new Promise((r) => setTimeout(r, 2000))
-            const { data: newAllowance } = await refetchAllowance()
-            if ((newAllowance as bigint) >= amount) {
-              approved = true
-              break
-            }
-          }
-
-          if (!approved) {
-            throw new Error('Approval transaction not confirmed')
-          }
+          await refetchAllowance()
         }
 
         // Step 3: Generate commitment
-        const { commitment, note, index } = generateCommitment()
+        const { commitment, index } = generateCommitment()
 
         // Convert commitment to bytes32
         const commitmentBytes = pad(toHex(commitment), { size: 32 }) as `0x${string}`
@@ -129,10 +111,6 @@ export function useDeposit() {
         })
 
         setState('waiting_deposit')
-
-        // Wait for deposit to be mined (poll for confirmation)
-        // In production, use proper tx receipt waiting
-        await new Promise((r) => setTimeout(r, 2000))
 
         // Refetch balances
         await refetchBalance()

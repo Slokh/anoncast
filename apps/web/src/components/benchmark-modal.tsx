@@ -15,6 +15,8 @@ import {
   type ProofInput,
 } from '@/lib/prover'
 import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
+import type { Note } from '@anon/sdk/core'
+import type { WithdrawPreparation } from '@anon/sdk/blockchain'
 
 type BenchmarkRun = {
   iteration: number
@@ -27,20 +29,6 @@ type BenchmarkRun = {
 }
 
 type BenchmarkState = 'idle' | 'running' | 'complete' | 'error'
-
-type Note = {
-  secret: bigint
-  nullifier: bigint
-  commitment: bigint
-  amount: bigint
-  leafIndex: number
-}
-
-type WithdrawPreparation = {
-  inputNote: Note
-  merkleProof: { path: bigint[]; indices: number[]; root: bigint }
-  nullifierHash: bigint
-}
 
 const ITERATIONS = 3
 
