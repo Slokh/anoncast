@@ -7,7 +7,7 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://anoncast.org'),
   title: 'anoncast',
-  description: 'Post anonymously with $ANON',
+  description: 'Post anonymously with ANON',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
   openGraph: {
     title: 'anoncast',
-    description: 'Post anonymously with $ANON',
+    description: 'Post anonymously with ANON',
     images: ['/banner.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'anoncast',
-    description: 'Post anonymously with $ANON',
+    description: 'Post anonymously with ANON',
     images: ['/banner.png'],
   },
 }

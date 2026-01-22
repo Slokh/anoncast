@@ -139,7 +139,7 @@ export function WithdrawModal({
             <div className="text-center">
               <p className="text-lg font-bold">Withdrawal Successful!</p>
               <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
-                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">$ANON</span>
+                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">ANON</span>
               </p>
             </div>
             <button
@@ -159,7 +159,7 @@ export function WithdrawModal({
                   <span className="text-xs uppercase tracking-wider text-muted-foreground">Private Balance</span>
                 </div>
                 <span className="font-mono text-xl font-bold tabular-nums text-primary">
-                  {formatBalance(privateBalance)} <span className="text-sm font-normal">$ANON</span>
+                  {formatBalance(privateBalance)} <span className="text-sm font-normal">ANON</span>
                 </span>
               </div>
             </div>
@@ -185,7 +185,7 @@ export function WithdrawModal({
                           Note #{index + 1}
                         </span>
                         <span className="font-mono text-sm font-bold tabular-nums">
-                          {formatUnits(note.amount, TOKEN_DECIMALS)} <span className="text-xs font-normal text-primary">$ANON</span>
+                          {formatUnits(note.amount, TOKEN_DECIMALS)} <span className="text-xs font-normal text-primary">ANON</span>
                         </span>
                       </div>
                     </button>
@@ -203,7 +203,7 @@ export function WithdrawModal({
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
                 <p className="font-semibold text-foreground">Withdrawing</p>
                 <p className="mt-1">
-                  {formatUnits(selectedNote.amount, TOKEN_DECIMALS)} $ANON will be sent to your public wallet.
+                  {formatUnits(selectedNote.amount, TOKEN_DECIMALS)} ANON will be sent to your public wallet.
                 </p>
               </div>
             )}
@@ -237,7 +237,7 @@ export function WithdrawModal({
               ) : state === 'error' ? (
                 'Try Again'
               ) : selectedNote ? (
-                `Withdraw ${formatUnits(selectedNote.amount, TOKEN_DECIMALS)} $ANON`
+                `Withdraw ${formatUnits(selectedNote.amount, TOKEN_DECIMALS)} ANON`
               ) : (
                 'Select a note'
               )}

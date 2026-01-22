@@ -33,7 +33,7 @@ export function PoolStats() {
             {isLoading ? (
               <span className="text-muted-foreground animate-pulse">...</span>
             ) : (
-              <>{formattedTotal} <span className="text-sm font-normal text-primary">$ANON</span></>
+              <>{formattedTotal} <span className="text-sm font-normal text-primary">ANON</span></>
             )}
           </p>
         </div>

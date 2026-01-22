@@ -125,7 +125,7 @@ export function DepositModal({
             <div className="text-center">
               <p className="text-lg font-bold">Deposit Successful!</p>
               <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
-                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">$ANON</span>
+                {result && formatTokenAmount(result.amount)} <span className="text-sm font-normal">ANON</span>
               </p>
             </div>
             <button
@@ -148,7 +148,7 @@ export function DepositModal({
                   disabled={isProcessing}
                   className="w-full bg-transparent font-mono text-3xl font-bold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="ml-2 text-sm font-medium text-primary">$ANON</span>
+                <span className="ml-2 text-sm font-medium text-primary">ANON</span>
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-primary/20 pt-3">
                 <div className="flex items-center gap-1.5">
@@ -207,7 +207,7 @@ export function DepositModal({
               ) : state === 'error' ? (
                 'Try Again'
               ) : (
-                `Deposit ${amount || '0'} $ANON`
+                `Deposit ${amount || '0'} ANON`
               )}
             </button>
           </div>

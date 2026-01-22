@@ -17,7 +17,7 @@ export default function Home() {
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex items-baseline gap-3">
               <span className="w-5 shrink-0 font-mono text-xs text-primary">01</span>
-              <p className="text-muted-foreground">Deposit <span className="text-foreground">$ANON</span> into your private balance</p>
+              <p className="text-muted-foreground">Deposit <span className="text-foreground">ANON</span> into your private balance</p>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="w-5 shrink-0 font-mono text-xs text-primary">02</span>

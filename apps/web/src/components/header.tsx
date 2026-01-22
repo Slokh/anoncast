@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { ArrowRight, Loader2, Shield, Eye, Trash2 } from 'lucide-react'
+import { ArrowRight, Loader2, Shield, Eye, Trash2, MessageSquare } from 'lucide-react'
 import { IS_TESTNET, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
@@ -34,6 +34,12 @@ export function Header() {
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [pendingUnlock, setPendingUnlock] = useState(false)
+  const [mockBidType, setMockBidType] = useState<string>('none')
+
+  // Sync mock bid type from localStorage
+  useEffect(() => {
+    setMockBidType(localStorage.getItem('anon:mockBid') || 'none')
+  }, [])
 
   const isFullyConnected = isConnected && isUnlocked
   const walletBal = tokenBalance ?? 0n
@@ -90,19 +96,37 @@ export function Header() {
       {IS_TESTNET && (
         <div className="flex items-center justify-between bg-yellow-500/20 px-4 py-1 text-xs font-medium text-yellow-600">
           <span>{NETWORK_NAME} Testnet</span>
-          <button
-            onClick={() => {
-              if (confirm('Clear all wallet data from localStorage? You will need to reconnect and any unsynced notes may be lost.')) {
-                clearAllData()
-                window.location.reload()
-              }
-            }}
-            className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
-            title="Clear localStorage"
-          >
-            <Trash2 className="h-3 w-3" />
-            <span>Reset</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const modes = ['none', 'text', 'image', 'link'] as const
+                const currentIndex = modes.indexOf(mockBidType as typeof modes[number])
+                const nextIndex = (currentIndex + 1) % modes.length
+                const nextMode = modes[nextIndex]
+                localStorage.setItem('anon:mockBid', nextMode)
+                setMockBidType(nextMode)
+                window.dispatchEvent(new Event('mockBidToggle'))
+              }}
+              className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
+              title="Cycle mock bid: none → text → image → link"
+            >
+              <MessageSquare className="h-3 w-3" />
+              <span>Mock: {mockBidType}</span>
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('Clear all wallet data from localStorage? You will need to reconnect and any unsynced notes may be lost.')) {
+                  clearAllData()
+                  window.location.reload()
+                }
+              }}
+              className="flex items-center gap-1 rounded px-2 py-0.5 transition-colors hover:bg-yellow-500/30"
+              title="Clear localStorage"
+            >
+              <Trash2 className="h-3 w-3" />
+              <span>Reset</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -235,7 +259,7 @@ export function Header() {
               {/* Get tokens hint */}
               {walletBal === 0n && poolBal === 0n && (
                 <div className="mt-3 rounded-lg bg-white/5 p-2 text-center text-xs text-muted-foreground">
-                  Get $ANON on{' '}
+                  Get ANON on{' '}
                   <a
                     href="https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
                     target="_blank"

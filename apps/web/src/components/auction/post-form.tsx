@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAccount } from 'wagmi'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { parseUnits, formatUnits } from 'viem'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   ImagePlus,
@@ -33,10 +31,8 @@ export function PostForm() {
 
   const {
     isUnlocked,
-    isLoading: walletLoading,
     balance,
     error: walletError,
-    unlock,
     sync,
     prepareTransfer,
     canAffordTransfer,
@@ -62,7 +58,6 @@ export function PostForm() {
   const [error, setError] = useState<string | null>(null)
   const [currentHighestBid, setCurrentHighestBid] = useState('0')
   const [showDepositModal, setShowDepositModal] = useState(false)
-  const [pendingUnlock, setPendingUnlock] = useState(false)
 
   // Fetch current highest bid and set default
   useEffect(() => {
@@ -184,39 +179,14 @@ export function PostForm() {
     setError(null)
   }, [])
 
-  // Handle unlock after wallet connects
-  useEffect(() => {
-    if (pendingUnlock && isConnected && !isUnlocked && !walletLoading) {
-      setPendingUnlock(false)
-      unlock().then((success) => {
-        if (success) {
-          sync()
-        }
-      })
-    }
-  }, [pendingUnlock, isConnected, isUnlocked, walletLoading, unlock, sync])
-
-  const handleConnectClick = useCallback(
-    (openConnectModal: () => void) => {
-      if (isConnected && !isUnlocked) {
-        unlock().then((success) => {
-          if (success) {
-            sync()
-          }
-        })
-      } else if (!isConnected) {
-        setPendingUnlock(true)
-        openConnectModal()
-      }
-    },
-    [isConnected, isUnlocked, unlock, sync]
-  )
+  // Hide form if not connected
+  if (!isConnected || !isUnlocked) {
+    return null
+  }
 
   // Determine which button to show
-  const isFullyConnected = isConnected && isUnlocked
-  const privateBalance = balance?.available ?? 0n
   const publicBalance = tokenBalance ?? 0n
-  const needsMoreFunds = isFullyConnected && !hasEnoughBalance && bidAmountWei > 0n
+  const needsMoreFunds = !hasEnoughBalance && bidAmountWei > 0n
   const canDepositToAfford = needsMoreFunds && publicBalance >= bidAmountWei
   const needsToBuy = needsMoreFunds && !canDepositToAfford
 
@@ -362,19 +332,7 @@ export function PostForm() {
             />
           </div>
 
-          {!isFullyConnected ? (
-            <ConnectButton.Custom>
-              {({ openConnectModal }) => (
-                <button
-                  onClick={() => handleConnectClick(openConnectModal)}
-                  disabled={walletLoading}
-                  className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 disabled:cursor-wait disabled:opacity-70"
-                >
-                  {walletLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
-                </button>
-              )}
-            </ConnectButton.Custom>
-          ) : needsToBuy ? (
+          {needsToBuy ? (
             <a
               href={UNISWAP_URL}
               target="_blank"
@@ -404,7 +362,7 @@ export function PostForm() {
         {bidAmount && !isValidBid && (
           <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
             <p className="text-xs text-destructive">
-              Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)} $ANON
+              Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)} ANON
             </p>
           </div>
         )}

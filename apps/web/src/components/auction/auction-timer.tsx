@@ -4,13 +4,48 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Clock, TrendingUp } from 'lucide-react'
 
+type HighestBidContent = {
+  content: string
+  images?: string[]
+  embeds?: string[]
+}
+
 type AuctionState = {
   currentSlotId: number
   nextSlotId: number
   highestBid: string
+  highestBidContent?: HighestBidContent
   timeRemaining: number
   bidCount: number
   slotTime: string
+}
+
+type MockBidType = 'none' | 'text' | 'image' | 'link'
+
+const MOCK_BIDS: Record<Exclude<MockBidType, 'none'>, Partial<AuctionState>> = {
+  text: {
+    highestBid: '42000000000000000000', // 42 tokens
+    bidCount: 3,
+    highestBidContent: {
+      content: 'gm anons! this is what a winning bid post looks like. it can be up to 320 characters and will be posted to the timeline when the auction ends. 🎭',
+    },
+  },
+  image: {
+    highestBid: '69000000000000000000', // 69 tokens
+    bidCount: 5,
+    highestBidContent: {
+      content: 'check out this rare pepe i found. mass posting this everywhere for maximum exposure.',
+      images: ['https://i.imgflip.com/9f66pz.jpg'],
+    },
+  },
+  link: {
+    highestBid: '100000000000000000000', // 100 tokens
+    bidCount: 7,
+    highestBidContent: {
+      content: 'just mass bought the dip. here\'s my alpha on why ANON is going to 10x from here.',
+      embeds: ['https://dexscreener.com/base/0x0Db510e79909666d6dEc7f5e49370838c16D950f'],
+    },
+  },
 }
 
 function formatTimeRemaining(seconds: number): string {
@@ -31,6 +66,25 @@ function formatBidAmount(amount: string): string {
 export function AuctionTimer() {
   const [state, setState] = useState<AuctionState | null>(null)
   const [localTimeRemaining, setLocalTimeRemaining] = useState<number>(0)
+  const [mockBidType, setMockBidType] = useState<MockBidType>('none')
+
+  // Check localStorage for mock bid setting
+  useEffect(() => {
+    const stored = localStorage.getItem('anon:mockBid') as MockBidType | null
+    setMockBidType(stored || 'none')
+
+    // Listen for storage changes (from other components)
+    const handleStorage = () => {
+      const updated = localStorage.getItem('anon:mockBid') as MockBidType | null
+      setMockBidType(updated || 'none')
+    }
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('mockBidToggle', handleStorage)
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('mockBidToggle', handleStorage)
+    }
+  }, [])
 
   // Fetch auction state
   useEffect(() => {
@@ -52,6 +106,13 @@ export function AuctionTimer() {
     return () => clearInterval(interval)
   }, [])
 
+  // Apply mock bid overlay if enabled
+  const mockBid = mockBidType !== 'none' ? MOCK_BIDS[mockBidType] : null
+  const displayState = state ? {
+    ...state,
+    ...(mockBid || {}),
+  } : null
+
   // Countdown timer
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,7 +125,7 @@ export function AuctionTimer() {
     return () => clearInterval(interval)
   }, [])
 
-  if (!state) {
+  if (!displayState) {
     return (
       <Card>
         <CardContent className="p-4">
@@ -89,7 +150,8 @@ export function AuctionTimer() {
   }
 
   const isLastMinute = localTimeRemaining <= 60
-  const hasNoBids = state.highestBid === '0'
+  const hasNoBids = displayState.highestBid === '0'
+  const hasContent = displayState.highestBidContent?.content
 
   return (
     <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
@@ -119,15 +181,42 @@ export function AuctionTimer() {
             <div className="flex items-center justify-end gap-1.5">
               <TrendingUp className="h-4 w-4 text-green-500" />
               <span className="font-mono text-xl font-bold tabular-nums">
-                {hasNoBids ? 'No bids' : formatBidAmount(state.highestBid)}
+                {hasNoBids ? 'No bids' : formatBidAmount(displayState.highestBid)}
               </span>
-              {!hasNoBids && <span className="text-sm text-primary">$ANON</span>}
+              {!hasNoBids && <span className="text-sm text-primary">ANON</span>}
             </div>
             <div className="text-xs text-muted-foreground">
-              {state.bidCount} bid{state.bidCount !== 1 ? 's' : ''} this hour
+              {displayState.bidCount} bid{displayState.bidCount !== 1 ? 's' : ''} this hour
             </div>
           </div>
         </div>
+
+        {/* Current highest bid content */}
+        {hasContent && (
+          <div className="mt-3 border-t border-primary/20 pt-3">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Current leading post</div>
+            <p className="mt-2 text-sm text-foreground">{displayState.highestBidContent!.content}</p>
+            {displayState.highestBidContent!.images?.[0] && (
+              <div className="mt-2 overflow-hidden rounded-lg">
+                <img
+                  src={displayState.highestBidContent!.images[0]}
+                  alt="Post image"
+                  className="max-h-[200px] w-full object-cover"
+                />
+              </div>
+            )}
+            {displayState.highestBidContent!.embeds?.[0] && (
+              <a
+                href={displayState.highestBidContent!.embeds[0]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 block truncate rounded-lg border border-border/50 bg-white/5 px-3 py-2 text-xs text-primary hover:bg-white/10"
+              >
+                {displayState.highestBidContent!.embeds[0]}
+              </a>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
