@@ -17,7 +17,6 @@ import {
   Eye,
   Shield,
   Zap,
-  Lock,
 } from 'lucide-react'
 import { useWithdraw } from '@/hooks/use-withdraw'
 import { TOKEN_DECIMALS } from '@/config/chains'
@@ -213,7 +212,7 @@ export function WithdrawModal({
                   {(['server', 'main'] as ProverMode[]).map((mode) => {
                     const info = PROOF_MODE_INFO[mode]
                     const isSelected = proofMode === mode
-                    const Icon = mode === 'server' ? Zap : Lock
+                    const Icon = mode === 'server' ? Zap : Shield
                     return (
                       <button
                         key={mode}

@@ -11,11 +11,11 @@ const DEFAULT_MODE: ProverMode = 'server' // Default to fast (server) mode
 export const PROOF_MODE_INFO = {
   server: {
     label: 'Fast',
-    description: 'Server generates proof (~8s). Your note data is sent to our server.',
+    description: 'Your data is anonymously proxied through our servers.',
   },
   main: {
-    label: 'Private',
-    description: 'Browser generates proof (slower). Your data never leaves your device.',
+    label: 'Slow',
+    description: 'Your data never leaves your device.',
   },
 } as const
 
