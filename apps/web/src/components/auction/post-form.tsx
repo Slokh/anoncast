@@ -4,23 +4,15 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  ImagePlus,
-  Link2,
-  X,
-  Loader2,
-  CheckCircle,
-  ExternalLink,
-} from 'lucide-react'
+import { ImagePlus, Link2, X, Loader2, CheckCircle } from 'lucide-react'
 import { ImageUpload } from './image-upload'
 import { EmbedInput } from './embed-input'
 import { EmbedPreview } from './embed-preview'
+import { BuyModal } from './buy-modal'
 import { DepositModal } from './deposit-modal'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
 import { useTokenPrice } from '@/hooks/use-token-price'
-
-const UNISWAP_URL = 'https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base'
 
 const MAX_CHARS = 320
 
@@ -46,7 +38,6 @@ export function PostForm() {
     prepareTransfer,
     canAffordTransfer,
     getClaimCredentials,
-    markNoteSpent,
     generateDeposit,
   } = usePrivacyWallet()
 
@@ -67,6 +58,7 @@ export function PostForm() {
   const [error, setError] = useState<string | null>(null)
   const [apiHighestBid, setApiHighestBid] = useState('0')
   const [mockBidType, setMockBidType] = useState<MockBidType>('none')
+  const [showBuyModal, setShowBuyModal] = useState(false)
   const [showDepositModal, setShowDepositModal] = useState(false)
 
   // Check localStorage for mock bid setting
@@ -88,25 +80,29 @@ export function PostForm() {
   }, [])
 
   // Determine the effective highest bid (mock or real)
-  const currentHighestBid = mockBidType !== 'none'
-    ? MOCK_BID_AMOUNTS[mockBidType]
-    : apiHighestBid
+  const currentHighestBid = mockBidType !== 'none' ? MOCK_BID_AMOUNTS[mockBidType] : apiHighestBid
 
   // Fetch current highest bid from API
-  useEffect(() => {
-    async function fetchBid() {
-      try {
-        const res = await fetch('/api/auction/current')
-        if (res.ok) {
-          const data = await res.json()
-          setApiHighestBid(data.highestBid || '0')
-        }
-      } catch {
-        // Silent fail
+  const fetchBid = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auction/current')
+      if (res.ok) {
+        const data = await res.json()
+        setApiHighestBid(data.highestBid || '0')
       }
+    } catch {
+      // Silent fail
     }
-    fetchBid()
   }, [])
+
+  useEffect(() => {
+    fetchBid()
+
+    // Listen for bid updates from other components
+    const handleBidUpdate = () => fetchBid()
+    window.addEventListener('auctionBidUpdate', handleBidUpdate)
+    return () => window.removeEventListener('auctionBidUpdate', handleBidUpdate)
+  }, [fetchBid])
 
   // Update bid amount when mock mode or highest bid changes
   useEffect(() => {
@@ -185,9 +181,7 @@ export function PostForm() {
           embeds: embed ? [embed] : undefined,
           bidAmount: bidAmountWei.toString(),
           proof: mockProof,
-          outputCommitment: `0x${claimCreds.claimCommitment.toString(16)}`,
-          changeCommitment: `0x${transferData.changeNote.commitment.toString(16)}`,
-          changeAmount: transferData.changeNote.amount.toString(),
+          claimCommitment: `0x${claimCreds.claimCommitment.toString(16)}`,
         }),
       })
 
@@ -196,9 +190,15 @@ export function PostForm() {
         throw new Error(data.error || 'Failed to submit bid')
       }
 
-      await markNoteSpent(transferData.inputNote.commitment, 'pending')
+      // Note: We do NOT mark the note as spent here because submitting a bid
+      // is just a database record - no on-chain transaction has occurred.
+      // The note will only be spent when the auction settles and the winning
+      // bid is processed on-chain. The next sync() will detect the spent nullifier.
 
       setState('success')
+
+      // Notify other components to refresh auction state
+      window.dispatchEvent(new CustomEvent('auctionBidUpdate'))
 
       setText('')
       setImage(null)
@@ -208,7 +208,15 @@ export function PostForm() {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setState('error')
     }
-  }, [canSubmit, prepareTransfer, getClaimCredentials, bidAmountWei, text, image, embed, markNoteSpent])
+  }, [
+    canSubmit,
+    prepareTransfer,
+    getClaimCredentials,
+    bidAmountWei,
+    text,
+    image,
+    embed,
+  ])
 
   const resetState = useCallback(() => {
     setState('idle')
@@ -226,143 +234,140 @@ export function PostForm() {
   const canDepositToAfford = needsMoreFunds && publicBalance >= bidAmountWei
   const needsToBuy = needsMoreFunds && !canDepositToAfford
 
-  if (state === 'success') {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 p-6">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-            <CheckCircle className="h-10 w-10 text-green-500" />
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold">Bid Submitted!</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              If your bid is the highest when the slot ends, your post will be published.
-            </p>
-          </div>
-          <button
-            onClick={resetState}
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
-          >
-            Place Another Bid
-          </button>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <Card>
       <CardContent>
-        <div className="px-4 pt-4 pb-3">
-        <textarea
-          ref={textareaRef}
-          placeholder="What's happening, anon?"
-          value={text}
-          onChange={handleTextChange}
-          disabled={state !== 'idle'}
-          className="min-h-[100px] w-full resize-none bg-transparent text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-        />
-
-        {image && (
-          <div className="relative mt-3 overflow-hidden rounded-lg">
-            {!imageLoaded && (
-              <div className="flex h-[200px] items-center justify-center bg-muted">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        {state === 'success' ? (
+          /* Success state - matches form structure for consistent height */
+          /* Top section height: textarea min-h-[100px] + mt-3 (12px) + buttons h-7 (28px) = 140px */
+          <>
+            <div className="flex min-h-[174px] flex-col items-center justify-center px-4 pt-4 pb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                <CheckCircle className="h-6 w-6 text-green-500" />
               </div>
-            )}
-            <img
-              src={image}
-              alt="Upload"
-              className={`max-h-[300px] w-full object-contain ${!imageLoaded ? 'hidden' : ''}`}
-              onLoad={() => setImageLoaded(true)}
-            />
-            <button
-              onClick={() => {
-                setImage(null)
-                setImageLoaded(false)
-              }}
-              className="absolute right-2 top-2 cursor-pointer rounded-full bg-black/50 p-1.5 hover:bg-black/70"
-            >
-              <X className="h-3 w-3 text-white" strokeWidth={3} />
-            </button>
-          </div>
-        )}
+              <p className="mt-2 font-bold">Bid Submitted!</p>
+              <p className="mt-0.5 text-center text-xs text-muted-foreground">
+                If your bid is highest when the slot ends, your post will be published.
+              </p>
+            </div>
+            <div className="flex items-center justify-center border-t border-border/50 px-4 py-3">
+              <button
+                onClick={resetState}
+                className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
+              >
+                Place Another Bid
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Form state */
+          <>
+            <div className="px-4 pt-4 pb-3">
+              <textarea
+                ref={textareaRef}
+                placeholder="What's happening, anon?"
+                value={text}
+                onChange={handleTextChange}
+                disabled={state !== 'idle'}
+                className="min-h-[100px] w-full resize-none bg-transparent text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+              />
 
-        {embed && (
-          <div className="mt-3">
-            <EmbedPreview url={embed} onRemove={() => setEmbed(null)} />
-          </div>
-        )}
+              {image && (
+                <div className="relative mt-3 overflow-hidden rounded-lg">
+                  {!imageLoaded && (
+                    <div className="flex h-[200px] items-center justify-center bg-muted">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  <img
+                    src={image}
+                    alt="Upload"
+                    className={`max-h-[300px] w-full object-contain ${!imageLoaded ? 'hidden' : ''}`}
+                    onLoad={() => setImageLoaded(true)}
+                  />
+                  <button
+                    onClick={() => {
+                      setImage(null)
+                      setImageLoaded(false)
+                    }}
+                    className="absolute right-2 top-2 cursor-pointer rounded-full bg-black/50 p-1.5 hover:bg-black/70"
+                  >
+                    <X className="h-3 w-3 text-white" strokeWidth={3} />
+                  </button>
+                </div>
+              )}
 
-        {showImageUpload && !image && (
-          <div className="mt-3">
-            <ImageUpload
-              key={Date.now()}
-              onUpload={(url) => {
-                setImageLoaded(false)
-                setImage(url)
-                setShowImageUpload(false)
-              }}
-              onCancel={() => setShowImageUpload(false)}
-            />
-          </div>
-        )}
+              {embed && (
+                <div className="mt-3">
+                  <EmbedPreview url={embed} onRemove={() => setEmbed(null)} />
+                </div>
+              )}
 
-        {showEmbedInput && !embed && (
-          <div className="mt-3">
-            <EmbedInput
-              onSubmit={(url) => {
-                setEmbed(url)
-                setShowEmbedInput(false)
-              }}
-              onCancel={() => setShowEmbedInput(false)}
-            />
-          </div>
-        )}
+              {showImageUpload && !image && (
+                <div className="mt-3">
+                  <ImageUpload
+                    key={Date.now()}
+                    onUpload={(url) => {
+                      setImageLoaded(false)
+                      setImage(url)
+                      setShowImageUpload(false)
+                    }}
+                    onCancel={() => setShowImageUpload(false)}
+                  />
+                </div>
+              )}
 
-        {(error || walletError) && (
-          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
-            <p className="text-xs text-destructive">{error || walletError}</p>
-          </div>
-        )}
+              {showEmbedInput && !embed && (
+                <div className="mt-3">
+                  <EmbedInput
+                    onSubmit={(url) => {
+                      setEmbed(url)
+                      setShowEmbedInput(false)
+                    }}
+                    onCancel={() => setShowEmbedInput(false)}
+                  />
+                </div>
+              )}
 
-        {(state === 'generating_proof' || state === 'bidding') && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {state === 'generating_proof' && 'Generating proof...'}
-            {state === 'bidding' && 'Submitting bid...'}
-          </div>
-        )}
+              {(error || walletError) && (
+                <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                  <p className="text-xs text-destructive">{error || walletError}</p>
+                </div>
+              )}
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setShowImageUpload(true)}
-              disabled={!!image || state !== 'idle'}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ImagePlus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => setShowEmbedInput(true)}
-              disabled={!!embed || state !== 'idle'}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Link2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setShowImageUpload(true)}
+                    disabled={!!image || state !== 'idle'}
+                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ImagePlus className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setShowEmbedInput(true)}
+                    disabled={!!embed || state !== 'idle'}
+                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
-          <span className={`flex h-7 items-center rounded-full bg-white/5 px-2.5 text-xs tabular-nums ${isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {charsRemaining}
-          </span>
-        </div>
-        </div>
+                <span
+                  className={`flex h-7 items-center rounded-full bg-white/5 px-2.5 text-xs tabular-nums ${isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}
+                >
+                  {charsRemaining}
+                </span>
+              </div>
+            </div>
 
-        <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
+            <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
           <div className="flex items-baseline gap-2">
             <span className="text-xs uppercase tracking-wider text-muted-foreground">BID</span>
             <div className="relative border-b border-dashed border-muted-foreground/30">
-              <span className="invisible font-mono text-xl font-bold tabular-nums">{bidAmount || '0'}</span>
+              <span className="invisible font-mono text-xl font-bold tabular-nums">
+                {bidAmount || '0'}
+              </span>
               <input
                 type="number"
                 value={bidAmount}
@@ -372,19 +377,20 @@ export function PostForm() {
               />
             </div>
             <span className="text-xs text-muted-foreground">
-              ANON{bidAmount && formatUsdFromNumber(parseFloat(bidAmount) || 0) && ` (${formatUsdFromNumber(parseFloat(bidAmount) || 0)})`}
+              ANON
+              {bidAmount &&
+                formatUsdFromNumber(parseFloat(bidAmount) || 0) &&
+                ` (${formatUsdFromNumber(parseFloat(bidAmount) || 0)})`}
             </span>
           </div>
 
           {needsToBuy ? (
-            <a
-              href={UNISWAP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex cursor-pointer items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
+            <button
+              onClick={() => setShowBuyModal(true)}
+              className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40"
             >
-              Buy <ExternalLink className="h-3 w-3" />
-            </a>
+              Buy
+            </button>
           ) : canDepositToAfford ? (
             <button
               onClick={() => setShowDepositModal(true)}
@@ -398,19 +404,27 @@ export function PostForm() {
               disabled={!canSubmit}
               className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-primary/40 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
             >
-              {state !== 'idle' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
+              Post
             </button>
           )}
         </div>
 
-        {bidAmount && !isValidBid && (
-          <div className="m-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
-            <p className="text-xs text-destructive">
-              Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)} ANON
-            </p>
-          </div>
+            {bidAmount && !isValidBid && (
+              <div className="m-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                <p className="text-xs text-destructive">
+                  Bid must be higher than {formatUnits(BigInt(currentHighestBid), 18)} ANON
+                </p>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
+
+      <BuyModal
+        open={showBuyModal}
+        onOpenChange={setShowBuyModal}
+        onSuccess={() => setShowBuyModal(false)}
+      />
 
       <DepositModal
         open={showDepositModal}
