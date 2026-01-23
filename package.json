@@ -10,7 +10,12 @@
     "test": "bun run test:contracts",
     "test:contracts": "cd packages/protocol && forge test",
     "test:circuits": "cd packages/protocol && bun run test:circuits",
-    "test:e2e": "bun run scripts/test-withdraw.ts"
+    "test:withdraw": "./scripts/test-withdraw.sh",
+    "test:auction": "./scripts/test-auction.sh",
+    "lint": "bun run --filter @anon/web lint && bun run lint:scripts",
+    "lint:scripts": "tsc --project scripts/tsconfig.json",
+    "format": "bun run --filter @anon/web format",
+    "format:check": "bun run --filter @anon/web format:check"
   },
   "dependencies": {
     "viem": "^2.21.55"

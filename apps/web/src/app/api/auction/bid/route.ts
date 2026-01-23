@@ -6,6 +6,8 @@ import {
   getCurrentHighestBidAmount,
 } from '@/lib/auction-store'
 
+export const dynamic = 'force-dynamic'
+
 // TODO: Import auction verifier once circuit is compiled
 // import { AuctionVerifier } from '@anon/sdk/core/auction'
 
@@ -27,10 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!body.content || !body.bidAmount || !body.proof || !body.claimCommitment) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     if (body.content.length > 320) {
@@ -50,18 +49,12 @@ export async function POST(request: NextRequest) {
 
     // Verify bid amount matches proof
     if (BigInt(proofBidAmount) !== BigInt(body.bidAmount)) {
-      return NextResponse.json(
-        { error: 'Bid amount does not match proof' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Bid amount does not match proof' }, { status: 400 })
     }
 
     // Check if nullifier already used
-    if (isNullifierUsed(nullifierHash)) {
-      return NextResponse.json(
-        { error: 'This deposit has already been spent' },
-        { status: 400 }
-      )
+    if (await isNullifierUsed(nullifierHash)) {
+      return NextResponse.json({ error: 'This deposit has already been spent' }, { status: 400 })
     }
 
     // TODO: Verify ZK proof once circuit is compiled
@@ -74,7 +67,7 @@ export async function POST(request: NextRequest) {
     // TODO: Verify merkle root is valid (check against contract)
 
     const slotId = getCurrentSlotId()
-    const currentHighest = getCurrentHighestBidAmount(slotId)
+    const currentHighest = await getCurrentHighestBidAmount(slotId)
 
     // Check if bid is higher than current highest
     if (BigInt(body.bidAmount) <= BigInt(currentHighest)) {
@@ -88,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Submit the bid
-    const bid = submitBid({
+    const bid = await submitBid({
       slotId,
       bidAmount: body.bidAmount,
       content: body.content,
@@ -107,6 +100,7 @@ export async function POST(request: NextRequest) {
       isHighestBid: true,
     })
   } catch (error) {
+    console.error('Error submitting bid:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

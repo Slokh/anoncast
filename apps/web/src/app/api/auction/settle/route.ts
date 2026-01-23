@@ -9,6 +9,8 @@ import {
 import { getNeynar } from '@/services/neynar'
 import { getTwitter } from '@/services/twitter'
 
+export const dynamic = 'force-dynamic'
+
 // Secret key for cron job authentication
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     const currentSlotId = getCurrentSlotId()
     const previousSlotId = currentSlotId - 3600
 
-    const slot = getSlot(previousSlotId)
+    const slot = await getSlot(previousSlotId)
 
     // Check if already settled
     if (slot.settled) {
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get highest bid
-    const winningBid = getHighestBid(previousSlotId)
+    const winningBid = await getHighestBid(previousSlotId)
 
     if (!winningBid) {
       // No bids - nothing to settle
@@ -56,10 +58,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!castResult.success) {
-      return NextResponse.json(
-        { error: 'Failed to create cast' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to create cast' }, { status: 500 })
     }
 
     // Post to Twitter
@@ -78,15 +77,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Settle the slot
-    settleSlot(previousSlotId, winningBid, castResult.cast.hash, tweetId)
+    await settleSlot(previousSlotId, winningBid, castResult.cast.hash, tweetId)
 
     // TODO: Trigger on-chain settlement
     // This would call the smart contract to:
     // 1. Mark the nullifier as spent
     // 2. Transfer bid amount to previous winner (or genesis recipient)
     //
-    // const lastWinner = getLastWinningSlot()
+    // const lastWinner = await getLastWinningSlot()
     // await settleOnChain(previousSlotId, winningBid, lastWinner)
+
+    const lastWinner = await getLastWinningSlot()
 
     return NextResponse.json({
       success: true,
@@ -96,11 +97,12 @@ export async function POST(request: NextRequest) {
       bidAmount: winningBid.bidAmount,
       // Info about reward distribution
       rewardInfo: {
-        previousWinner: getLastWinningSlot()?.slotId,
+        previousWinner: lastWinner?.slotId,
         amount: winningBid.bidAmount,
       },
     })
   } catch (error) {
+    console.error('Error settling auction:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
