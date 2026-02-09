@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {AnonPool} from "../contracts/AnonPool.sol";
-import {AuctionSpender} from "../contracts/AuctionSpender.sol";
+import {AnonPoolAuctionSpender} from "../contracts/AnonPoolAuctionSpender.sol";
 import {WithdrawVerifier} from "../contracts/verifiers/WithdrawVerifier.sol";
 import {TransferVerifier} from "../contracts/verifiers/TransferVerifier.sol";
 
@@ -81,10 +81,10 @@ contract DeployMainnet is Script {
     }
 }
 
-/// @title DeployAuctionSpender
-/// @notice Deploys AuctionSpender for an existing AnonPool
+/// @title DeployAnonPoolAuctionSpender
+/// @notice Deploys AnonPoolAuctionSpender for an existing AnonPool
 /// @dev Requires ANON_POOL address (deploy pool first)
-contract DeployAuctionSpender is Script {
+contract DeployAnonPoolAuctionSpender is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address anonPool = vm.envAddress("ANON_POOL");
@@ -97,19 +97,19 @@ contract DeployAuctionSpender is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy AuctionSpender
-        AuctionSpender auctionSpender = new AuctionSpender(
+        // Deploy AnonPoolAuctionSpender
+        AnonPoolAuctionSpender auctionSpender = new AnonPoolAuctionSpender(
             anonPool,
             operator,
             slotStartTime,
             settlementWindowStart,
             settlementWindowEnd
         );
-        console.log("AuctionSpender deployed to:", address(auctionSpender));
+        console.log("AnonPoolAuctionSpender deployed to:", address(auctionSpender));
 
-        // Add AuctionSpender as approved spender on AnonPool
+        // Add AnonPoolAuctionSpender as approved spender on AnonPool
         AnonPool(anonPool).addSpender(address(auctionSpender));
-        console.log("AuctionSpender added as approved spender on AnonPool");
+        console.log("AnonPoolAuctionSpender added as approved spender on AnonPool");
 
         vm.stopBroadcast();
 
@@ -125,7 +125,7 @@ contract DeployAuctionSpender is Script {
 }
 
 /// @title DeployFullStack
-/// @notice Deploys complete stack: Verifiers, AnonPool, and AuctionSpender
+/// @notice Deploys complete stack: Verifiers, AnonPool, and AnonPoolAuctionSpender
 /// @dev For production deployments with full auction functionality
 contract DeployFullStack is Script {
     // Real $ANON token on Base mainnet
@@ -156,19 +156,19 @@ contract DeployFullStack is Script {
         );
         console.log("AnonPool:", address(pool));
 
-        // 3. Deploy AuctionSpender
-        AuctionSpender auctionSpender = new AuctionSpender(
+        // 3. Deploy AnonPoolAuctionSpender
+        AnonPoolAuctionSpender auctionSpender = new AnonPoolAuctionSpender(
             address(pool),
             auctionOperator,
             slotStartTime,
             settlementWindowStart,
             settlementWindowEnd
         );
-        console.log("AuctionSpender:", address(auctionSpender));
+        console.log("AnonPoolAuctionSpender:", address(auctionSpender));
 
-        // 4. Add AuctionSpender as approved spender
+        // 4. Add AnonPoolAuctionSpender as approved spender
         pool.addSpender(address(auctionSpender));
-        console.log("AuctionSpender added as approved spender");
+        console.log("AnonPoolAuctionSpender added as approved spender");
 
         vm.stopBroadcast();
 

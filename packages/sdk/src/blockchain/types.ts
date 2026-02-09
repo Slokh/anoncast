@@ -68,3 +68,30 @@ export type RootStatus = {
   depositsAgo: number
   depositsUntilExpiry: number
 }
+
+export type ConsolidateState =
+  | 'idle'
+  | 'preparing'
+  | 'generating_proofs'
+  | 'consolidating'
+  | 'waiting_consolidate'
+  | 'success'
+  | 'error'
+
+export type ConsolidateResult = {
+  txHash: string
+  totalAmount: bigint
+  newCommitment: bigint
+  notesConsolidated: number
+}
+
+export type ConsolidationPreparation = {
+  noteInputs: Array<{
+    note: Note
+    merkleProof: { path: bigint[]; indices: number[]; root: bigint }
+    nullifierHash: bigint
+  }>
+  newNote: Omit<Note, 'leafIndex' | 'timestamp'>
+  newNoteIndex: number
+  totalAmount: bigint
+}

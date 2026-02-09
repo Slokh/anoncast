@@ -9,13 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import {
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Shield,
-  Wallet,
-} from 'lucide-react'
+import { CheckCircle, AlertCircle, Loader2, Shield, Wallet } from 'lucide-react'
 import { useDeposit } from '@/hooks/use-deposit'
 import { TOKEN_DECIMALS } from '@/config/chains'
 import { useTokenPrice } from '@/hooks/use-token-price'
@@ -38,24 +32,10 @@ type Props = {
   sync: () => Promise<void>
 }
 
-export function DepositModal({
-  open,
-  onOpenChange,
-  onSuccess,
-  generateDeposit,
-  sync,
-}: Props) {
+export function DepositModal({ open, onOpenChange, onSuccess, generateDeposit, sync }: Props) {
   const [amount, setAmount] = useState('')
 
-  const {
-    state,
-    error,
-    result,
-    tokenBalance,
-    deposit,
-    reset,
-    formatTokenAmount,
-  } = useDeposit()
+  const { state, error, result, tokenBalance, deposit, reset, formatTokenAmount } = useDeposit()
   const { formatUsd, formatUsdFromNumber } = useTokenPrice()
 
   // Default to max balance when modal opens
@@ -67,7 +47,8 @@ export function DepositModal({
 
   const amountBigInt = amount ? parseUnits(amount, TOKEN_DECIMALS) : 0n
   const hasEnoughBalance = tokenBalance ? amountBigInt <= tokenBalance : false
-  const canDeposit = amountBigInt > 0n && hasEnoughBalance && (state === 'idle' || state === 'error')
+  const canDeposit =
+    amountBigInt > 0n && hasEnoughBalance && (state === 'idle' || state === 'error')
 
   const handleDeposit = useCallback(async () => {
     if (amountBigInt <= 0n || !hasEnoughBalance) return
@@ -112,8 +93,7 @@ export function DepositModal({
     }
   }, [tokenBalance])
 
-  const isProcessing =
-    state !== 'idle' && state !== 'success' && state !== 'error'
+  const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -166,7 +146,9 @@ export function DepositModal({
                   <span className="ml-2 text-sm font-medium text-primary">ANON</span>
                 </div>
                 {amount && formatUsdFromNumber(parseFloat(amount) || 0) && (
-                  <div className="text-sm text-muted-foreground">{formatUsdFromNumber(parseFloat(amount) || 0)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatUsdFromNumber(parseFloat(amount) || 0)}
+                  </div>
                 )}
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-primary/20 pt-3">
@@ -211,7 +193,9 @@ export function DepositModal({
               <div className="max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/10 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
-                  <p className="text-xs font-semibold uppercase tracking-wider text-destructive">Deposit Failed</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                    Deposit Failed
+                  </p>
                 </div>
                 <p className="break-all text-xs text-destructive/80">{error}</p>
               </div>

@@ -17,7 +17,9 @@ export default function Home() {
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex items-baseline gap-3">
               <span className="w-5 shrink-0 font-mono text-xs text-primary">01</span>
-              <p className="text-muted-foreground">Deposit <span className="text-foreground">ANON</span> into your private balance</p>
+              <p className="text-muted-foreground">
+                Deposit <span className="text-foreground">ANON</span> into your private balance
+              </p>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="w-5 shrink-0 font-mono text-xs text-primary">02</span>
@@ -25,11 +27,15 @@ export default function Home() {
             </div>
             <div className="flex items-baseline gap-3">
               <span className="w-5 shrink-0 font-mono text-xs text-primary">03</span>
-              <p className="text-muted-foreground"><span className="text-foreground">Highest bid</span> each hour gets posted</p>
+              <p className="text-muted-foreground">
+                <span className="text-foreground">Highest bid</span> each hour gets posted
+              </p>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="w-5 shrink-0 font-mono text-xs text-primary">04</span>
-              <p className="text-muted-foreground">Previous winner <span className="text-foreground">earns the winning bid</span></p>
+              <p className="text-muted-foreground">
+                Previous winner <span className="text-foreground">earns the winning bid</span>
+              </p>
             </div>
           </div>
           <div className="-mx-4 mt-3 flex items-center gap-2 border-t border-border/50 px-4 pt-3 text-xs text-muted-foreground">
@@ -38,7 +44,7 @@ export default function Home() {
           </div>
         </div>
 
-{/* <PoolStats /> */}
+        {/* <PoolStats /> */}
       </main>
     </div>
   )

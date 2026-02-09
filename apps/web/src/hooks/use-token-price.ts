@@ -5,7 +5,8 @@ import { formatUnits } from 'viem'
 import { TOKEN_DECIMALS } from '@/config/chains'
 
 // ANON token on Base
-const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens/0x0Db510e79909666d6dEc7f5e49370838c16D950f'
+const DEXSCREENER_API =
+  'https://api.dexscreener.com/latest/dex/tokens/0x0Db510e79909666d6dEc7f5e49370838c16D950f'
 
 type PriceData = {
   priceUsd: number
@@ -62,31 +63,39 @@ export function useTokenPrice() {
   }, [fetchPrice])
 
   // Format a bigint token amount to USD string
-  const formatUsd = useCallback((amount: bigint): string => {
-    if (!price?.priceUsd) return ''
-    if (amount === 0n) return '$0.00'
-    const tokenAmount = parseFloat(formatUnits(amount, TOKEN_DECIMALS))
-    const usdValue = tokenAmount * price.priceUsd
+  const formatUsd = useCallback(
+    (amount: bigint): string => {
+      if (!price?.priceUsd) return ''
+      if (amount === 0n) return '$0.00'
+      const tokenAmount = parseFloat(formatUnits(amount, TOKEN_DECIMALS))
+      const usdValue = tokenAmount * price.priceUsd
 
-    if (usdValue < 0.01) return '<$0.01'
-    if (usdValue < 1) return `$${usdValue.toFixed(2)}`
-    if (usdValue < 1000) return `$${usdValue.toFixed(2)}`
-    if (usdValue < 10000) return `$${usdValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-    return `$${(usdValue / 1000).toFixed(1)}k`
-  }, [price])
+      if (usdValue < 0.01) return '<$0.01'
+      if (usdValue < 1) return `$${usdValue.toFixed(2)}`
+      if (usdValue < 1000) return `$${usdValue.toFixed(2)}`
+      if (usdValue < 10000)
+        return `$${usdValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      return `$${(usdValue / 1000).toFixed(1)}k`
+    },
+    [price]
+  )
 
   // Format a number (already in token units) to USD string
-  const formatUsdFromNumber = useCallback((amount: number): string => {
-    if (!price?.priceUsd) return ''
-    if (amount === 0) return '$0.00'
-    const usdValue = amount * price.priceUsd
+  const formatUsdFromNumber = useCallback(
+    (amount: number): string => {
+      if (!price?.priceUsd) return ''
+      if (amount === 0) return '$0.00'
+      const usdValue = amount * price.priceUsd
 
-    if (usdValue < 0.01) return '<$0.01'
-    if (usdValue < 1) return `$${usdValue.toFixed(2)}`
-    if (usdValue < 1000) return `$${usdValue.toFixed(2)}`
-    if (usdValue < 10000) return `$${usdValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-    return `$${(usdValue / 1000).toFixed(1)}k`
-  }, [price])
+      if (usdValue < 0.01) return '<$0.01'
+      if (usdValue < 1) return `$${usdValue.toFixed(2)}`
+      if (usdValue < 1000) return `$${usdValue.toFixed(2)}`
+      if (usdValue < 10000)
+        return `$${usdValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      return `$${(usdValue / 1000).toFixed(1)}k`
+    },
+    [price]
+  )
 
   return {
     price: price?.priceUsd ?? null,

@@ -10,10 +10,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { CheckCircle, AlertCircle, Loader2, ArrowDown, ChevronDown, Settings2 } from 'lucide-react'
-import { useSwap, type InputToken, type SwapMode } from '@/hooks/use-swap'
+import { CheckCircle, AlertCircle, Loader2, ArrowDown, ChevronDown, Settings2, Lock, Shield } from 'lucide-react'
+import { useSwapAndDeposit, type InputToken, type SwapMode } from '@/hooks/use-swap-and-deposit'
 import { useTokenPrice } from '@/hooks/use-token-price'
-import { useDeposit } from '@/hooks/use-deposit'
+import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { ERC20_ABI } from '@/config/contracts'
 import { TOKEN_DECIMALS } from '@/config/chains'
 
@@ -21,6 +21,8 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  /** Optional: prefill with required ANON amount (in wei) for "Buy & Post" flow */
+  requiredAmount?: bigint
 }
 
 // Slippage options (in basis points: 50 = 0.5%, 100 = 1%)
@@ -40,7 +42,7 @@ const TOKEN_ICONS: Record<InputToken, string> = {
   USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
 }
 
-export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
+export function BuyModal({ open, onOpenChange, onSuccess, requiredAmount }: Props) {
   const { address } = useAccount()
   const { data: ethBalance } = useBalance({ address })
   const { data: usdcBalance } = useReadContract({
@@ -49,21 +51,24 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
   }) as { data: bigint | undefined }
-  const { refetchBalance } = useDeposit()
   const { formatUsd } = useTokenPrice()
+
+  // Privacy wallet integration
+  const { isUnlocked, generateDeposit, sync, formatBalance, balance: privateBalance } = usePrivacyWallet()
 
   const {
     state,
     error,
     quote,
+    gatewayAddress,
     getQuoteExactInput,
     getQuoteExactOutput,
     approveToken,
-    executeSwapExactInput,
-    executeSwapExactOutput,
+    executeSwapAndDepositExactInput,
+    executeSwapAndDepositExactOutput,
     reset,
     formatTokenAmount,
-  } = useSwap()
+  } = useSwapAndDeposit()
 
   const [inputToken, setInputToken] = useState<InputToken>('ETH')
   const [inputAmount, setInputAmount] = useState('')
@@ -113,9 +118,9 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
         const newQuote = await getQuoteExactInput(inputToken, parsedAmount)
         if (newQuote) {
           setSwapMode('exactInput')
-          // Update output display from quote
+          // Update output display from quote (whole numbers for ANON)
           const formatted = formatUnits(newQuote.amountOut, TOKEN_DECIMALS)
-          setOutputAmount(parseFloat(formatted).toFixed(2))
+          setOutputAmount(Math.floor(parseFloat(formatted)).toString())
         }
       } catch {
         // Invalid input
@@ -160,6 +165,16 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
     editingFieldRef.current = null
   }, [inputToken])
 
+  // Prefill output amount when modal opens with required amount (Buy & Post flow)
+  useEffect(() => {
+    if (open && requiredAmount && requiredAmount > 0n) {
+      const formatted = formatUnits(requiredAmount, TOKEN_DECIMALS)
+      // Show whole numbers for ANON
+      setOutputAmount(Math.ceil(parseFloat(formatted)).toString())
+      editingFieldRef.current = 'output'
+    }
+  }, [open, requiredAmount])
+
   const hasEnoughBalance = balance ? inputAmountWei <= balance : false
   const needsApproval = quote?.needsApproval ?? false
   const isApproving = state === 'approving'
@@ -169,37 +184,67 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
     quote &&
     quote.amountOut > 0n &&
     !needsApproval &&
+    isUnlocked &&
+    gatewayAddress &&
     (state === 'idle' || state === 'error')
   const canApprove =
-    needsApproval && (state === 'idle' || state === 'error')
+    needsApproval && isUnlocked && gatewayAddress && (state === 'idle' || state === 'error')
 
   const handleApprove = useCallback(async () => {
     await approveToken(inputToken)
   }, [approveToken, inputToken])
 
-  const handleSwap = useCallback(async () => {
+  const handleSwapAndDeposit = useCallback(async () => {
     if (!quote || !canSwap) return
+
+    // Generate commitment for deposit
+    const depositData = generateDeposit(quote.amountOut)
+    if (!depositData) {
+      return
+    }
 
     let success = false
 
     if (swapMode === 'exactInput') {
       // For exact input, apply slippage to output (minimum received)
       const minAmountOut = (quote.amountOut * BigInt(10000 - slippageBps)) / 10000n
-      success = await executeSwapExactInput(inputToken, quote.amountIn, minAmountOut)
+      success = await executeSwapAndDepositExactInput(
+        inputToken,
+        quote.amountIn,
+        minAmountOut,
+        depositData.commitment
+      )
     } else {
       // For exact output, apply slippage to input (maximum spent)
       const maxAmountIn = (quote.amountIn * BigInt(10000 + slippageBps)) / 10000n
-      success = await executeSwapExactOutput(inputToken, quote.amountOut, maxAmountIn)
+      success = await executeSwapAndDepositExactOutput(
+        inputToken,
+        quote.amountOut,
+        maxAmountIn,
+        depositData.commitment
+      )
     }
 
     if (success) {
-      await refetchBalance()
+      // Sync wallet to pick up the new note
+      await sync()
       onSuccess?.()
     }
-  }, [quote, canSwap, swapMode, executeSwapExactInput, executeSwapExactOutput, inputToken, slippageBps, refetchBalance, onSuccess])
+  }, [
+    quote,
+    canSwap,
+    swapMode,
+    generateDeposit,
+    executeSwapAndDepositExactInput,
+    executeSwapAndDepositExactOutput,
+    inputToken,
+    slippageBps,
+    sync,
+    onSuccess,
+  ])
 
   const handleClose = useCallback(() => {
-    if (state === 'swapping' || state === 'approving') {
+    if (state === 'depositing' || state === 'approving') {
       return
     }
     reset()
@@ -246,7 +291,7 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
     setShowTokenSelect(false)
   }, [])
 
-  const isProcessing = state === 'swapping' || state === 'approving'
+  const isProcessing = state === 'depositing' || state === 'approving'
   const isQuoting = state === 'quoting'
 
   return (
@@ -257,8 +302,40 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
             <img src="/anon.png" alt="ANON" className="h-5 w-5 rounded-full" />
             Buy ANON
           </DialogTitle>
-          <DialogDescription>Swap ETH or USDC for ANON tokens using Uniswap.</DialogDescription>
+          <DialogDescription>
+            Swap ETH or USDC for ANON and deposit directly to your private balance.
+          </DialogDescription>
         </DialogHeader>
+
+        {/* Privacy wallet not unlocked warning */}
+        {!isUnlocked && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <Lock className="mt-0.5 h-5 w-5 text-yellow-500" />
+              <div>
+                <p className="text-sm font-medium text-yellow-500">Privacy Wallet Required</p>
+                <p className="mt-1 text-xs text-yellow-500/80">
+                  Please unlock your privacy wallet to buy and deposit ANON tokens.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Gateway not configured warning */}
+        {isUnlocked && !gatewayAddress && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 text-destructive" />
+              <div>
+                <p className="text-sm font-medium text-destructive">Gateway Not Available</p>
+                <p className="mt-1 text-xs text-destructive/80">
+                  The swap gateway is not configured. Please check your environment setup.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {state === 'success' ? (
           <div className="flex flex-col items-center gap-4 py-6">
@@ -266,10 +343,19 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
               <CheckCircle className="h-10 w-10 text-green-500" />
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold">Swap Successful!</p>
+              <p className="text-lg font-bold">Deposit Successful!</p>
               {quote && (
                 <p className="mt-1 font-mono text-xl font-bold tabular-nums text-primary">
                   +{formatTokenAmount(quote.amountOut)} ANON
+                </p>
+              )}
+              <div className="mt-2 flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                <Shield className="h-4 w-4 text-primary" />
+                <span>Added to private balance</span>
+              </div>
+              {privateBalance && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  New private balance: {formatBalance(privateBalance.available)} ANON
                 </p>
               )}
             </div>
@@ -297,12 +383,12 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
                   value={inputAmount}
                   onChange={(e) => handleInputChange(e.target.value)}
                   placeholder="0"
-                  disabled={isProcessing}
+                  disabled={isProcessing || !isUnlocked}
                   className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-bold tabular-nums placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <button
                   onClick={handleMaxClick}
-                  disabled={isProcessing}
+                  disabled={isProcessing || !isUnlocked}
                   className="cursor-pointer rounded-md bg-primary/20 px-2 py-1 text-xs font-medium uppercase tracking-wider text-primary transition-all hover:bg-primary/30 disabled:opacity-50"
                 >
                   MAX
@@ -362,10 +448,13 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
               </div>
             </div>
 
-            {/* ANON Output */}
+            {/* ANON Output - with shield icon to indicate private deposit */}
             <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>You receive</span>
+                <span className="flex items-center gap-1">
+                  <Shield className="h-3 w-3 text-primary" />
+                  Private deposit
+                </span>
                 {isQuoting && (
                   <span className="flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -379,7 +468,7 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
                   value={outputAmount}
                   onChange={(e) => handleOutputChange(e.target.value)}
                   placeholder="0"
-                  disabled={isProcessing}
+                  disabled={isProcessing || !isUnlocked}
                   className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-bold tabular-nums text-primary placeholder:text-primary/30 focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5">
@@ -393,7 +482,7 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
             </div>
 
             {/* Swap details */}
-            {quote && (
+            {quote && isUnlocked && (
               <div className="rounded-lg border border-border/50 bg-muted/20 p-3 text-xs">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span>Slippage tolerance</span>
@@ -496,7 +585,15 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
             )}
 
             {/* Action button */}
-            {(needsApproval || isApproving) ? (
+            {!isUnlocked ? (
+              <div className="rounded-xl bg-muted px-4 py-3 text-center text-sm text-muted-foreground">
+                Unlock privacy wallet to continue
+              </div>
+            ) : !gatewayAddress ? (
+              <div className="rounded-xl bg-muted px-4 py-3 text-center text-sm text-muted-foreground">
+                Gateway not configured
+              </div>
+            ) : (needsApproval || isApproving) ? (
               <button
                 onClick={handleApprove}
                 disabled={isApproving || !canApprove}
@@ -513,14 +610,14 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
               </button>
             ) : (
               <button
-                onClick={handleSwap}
+                onClick={handleSwapAndDeposit}
                 disabled={!canSwap || isProcessing || isQuoting}
                 className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:shadow-primary/40 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
               >
                 {isProcessing ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Swapping...
+                    Depositing...
                   </>
                 ) : isQuoting ? (
                   <>
@@ -536,7 +633,10 @@ export function BuyModal({ open, onOpenChange, onSuccess }: Props) {
                 ) : state === 'error' ? (
                   'Try Again'
                 ) : (
-                  `Swap for ${formatTokenAmount(quote.amountOut)} ANON`
+                  <>
+                    <Shield className="h-4 w-4" />
+                    Buy & Deposit {formatTokenAmount(quote.amountOut)} ANON
+                  </>
                 )}
               </button>
             )}

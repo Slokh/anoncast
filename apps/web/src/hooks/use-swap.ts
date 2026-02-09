@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
 import { formatUnits, maxUint256 } from 'viem'
-import { TOKEN_DECIMALS } from '@/config/chains'
+import { TOKEN_DECIMALS, IS_LOCAL } from '@/config/chains'
 
 // Uniswap V3 on Base
 const SWAP_ROUTER_02 = '0x2626664c2603336E57B271c5C0b26F421741e481' as const
@@ -331,7 +331,10 @@ export function useSwap() {
           args: [SWAP_ROUTER_02, maxUint256],
         })
 
-        await publicClient.waitForTransactionReceipt({ hash })
+        // In local mode, skip waiting for receipt (can cause issues with Anvil fork)
+        if (!IS_LOCAL) {
+          await publicClient.waitForTransactionReceipt({ hash })
+        }
 
         // Update quote to reflect approval
         if (quote) {
@@ -387,7 +390,10 @@ export function useSwap() {
         })
 
         setTxHash(hash)
-        await publicClient.waitForTransactionReceipt({ hash })
+        // In local mode, skip waiting for receipt (can cause issues with Anvil fork)
+        if (!IS_LOCAL) {
+          await publicClient.waitForTransactionReceipt({ hash })
+        }
         setState('success')
         return true
       } catch (err) {
@@ -431,7 +437,10 @@ export function useSwap() {
         })
 
         setTxHash(hash)
-        await publicClient.waitForTransactionReceipt({ hash })
+        // In local mode, skip waiting for receipt (can cause issues with Anvil fork)
+        if (!IS_LOCAL) {
+          await publicClient.waitForTransactionReceipt({ hash })
+        }
         setState('success')
         return true
       } catch (err) {

@@ -1,10 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import {
-  useAccount,
-  useWriteContract,
-} from 'wagmi'
+import { useAccount, useWriteContract } from 'wagmi'
 import { formatUnits, pad, toHex } from 'viem'
 import { CONTRACTS, TOKEN_DECIMALS } from '@/config/chains'
 import { ANON_POOL_ABI } from '@/config/contracts'
@@ -85,7 +82,9 @@ export function useWithdraw() {
         const proofBytes = new Uint8Array(proofResult.proof)
 
         // Convert values to bytes32
-        const nullifierHashBytes = pad(toHex(preparation.nullifierHash), { size: 32 }) as `0x${string}`
+        const nullifierHashBytes = pad(toHex(preparation.nullifierHash), {
+          size: 32,
+        }) as `0x${string}`
         const rootBytes = pad(toHex(preparation.merkleProof.root), { size: 32 }) as `0x${string}`
 
         // Step 3: Submit withdrawal transaction
@@ -95,13 +94,7 @@ export function useWithdraw() {
           address: CONTRACTS.POOL,
           abi: ANON_POOL_ABI,
           functionName: 'withdraw' as const,
-          args: [
-            toHex(proofBytes),
-            nullifierHashBytes,
-            rootBytes,
-            amount,
-            address,
-          ] as const,
+          args: [toHex(proofBytes), nullifierHashBytes, rootBytes, amount, address] as const,
         })
 
         setState('waiting_withdraw')
@@ -130,7 +123,11 @@ export function useWithdraw() {
         // 0x9dd854d3 is the selector for InvalidProof()
         if (errorMessage.includes('InvalidProof') || errorMessage.includes('0x9dd854d3')) {
           setError('Invalid proof - the withdrawal proof was rejected by the contract.')
-        } else if (errorMessage.includes('NullifierAlreadySpent') || errorMessage.includes('0x')) {
+        } else if (
+          errorMessage.includes('NullifierAlreadySpent') ||
+          errorMessage.includes('0x26c84c78')
+        ) {
+          // 0x26c84c78 is the selector for NullifierAlreadySpent()
           setError('This note has already been spent.')
         } else if (errorMessage.includes('InvalidMerkleRoot')) {
           setError('The merkle root has expired. Please refresh and try again.')

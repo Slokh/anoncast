@@ -14,13 +14,13 @@ import {
   type TransferPreparation,
 } from '@anon/sdk/core'
 import { ANON_POOL_ABI } from '@anon/sdk/config'
-import type { WithdrawPreparation } from '@anon/sdk/blockchain'
+import type { WithdrawPreparation, ConsolidationPreparation } from '@anon/sdk/blockchain'
 
 // Contract addresses from config
 const POOL_CONTRACT = CONTRACTS.POOL
 
 // Re-export for backwards compatibility
-export type { RootFreshness, Note, WalletBalance, TransferPreparation, WithdrawPreparation }
+export type { RootFreshness, Note, WalletBalance, TransferPreparation, WithdrawPreparation, ConsolidationPreparation }
 
 type PrivacyWalletContextValue = {
   // State
@@ -41,18 +41,30 @@ type PrivacyWalletContextValue = {
   clearWallet: () => Promise<void>
   clearStoredSignature: () => void
   clearAllData: () => void
-  generateDeposit: (amount: bigint) => { commitment: bigint; note: Omit<Note, 'leafIndex' | 'timestamp'> & { index: number } } | null
-  prepareTransfer: (outputAmount: bigint, outputCommitment: bigint) => Promise<TransferPreparation | null>
-  prepareTransferWithFreshnessCheck: (outputAmount: bigint, outputCommitment: bigint) => Promise<{
+  generateDeposit: (amount: bigint) => {
+    commitment: bigint
+    note: Omit<Note, 'leafIndex' | 'timestamp'> & { index: number }
+  } | null
+  prepareTransfer: (
+    outputAmount: bigint,
+    outputCommitment: bigint
+  ) => Promise<TransferPreparation | null>
+  prepareTransferWithFreshnessCheck: (
+    outputAmount: bigint,
+    outputCommitment: bigint
+  ) => Promise<{
     preparation: TransferPreparation | null
     freshness: RootFreshness | null
   }>
   prepareWithdraw: (amount: bigint) => Promise<WithdrawPreparation | null>
+  prepareConsolidation: (notes: Note[]) => Promise<ConsolidationPreparation | null>
   findNoteForTransfer: (outputAmount: bigint) => Note | null
   findNoteForWithdraw: (amount: bigint) => Note | null
   canAffordTransfer: (outputAmount: bigint) => boolean
+  canConsolidate: () => boolean
   getClaimCredentials: (slotId: number) => { claimSecret: bigint; claimCommitment: bigint } | null
   markNoteSpent: (commitment: bigint, txHash: string) => Promise<void>
+  markNotesSpent: (commitments: bigint[], txHash: string) => Promise<void>
   formatBalance: (amount: bigint) => string
   checkRootFreshness: (root: bigint) => Promise<RootFreshness | null>
 
@@ -143,7 +155,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
     } else {
       setIsInitializing(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, accountStatus])
 
   // Clear state when wallet disconnects
@@ -162,46 +174,49 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
   /**
    * Restore wallet from a saved signature (no user interaction needed)
    */
-  const restoreFromSignature = useCallback(async (signature: string) => {
-    if (!address || !POOL_CONTRACT) return false
+  const restoreFromSignature = useCallback(
+    async (signature: string) => {
+      if (!address || !POOL_CONTRACT) return false
 
-    setIsLoading(true)
-    setError(null)
+      setIsLoading(true)
+      setError(null)
 
-    try {
-      const { PrivacyWallet, loadWalletState } = await loadPrivacyWallet()
+      try {
+        const { PrivacyWallet, loadWalletState } = await loadPrivacyWallet()
 
-      // Create wallet from signature
-      const wallet = PrivacyWallet.fromSignature(signature, POOL_CONTRACT, RPC_URL)
+        // Create wallet from signature
+        const wallet = PrivacyWallet.fromSignature(signature, POOL_CONTRACT, RPC_URL)
 
-      // Try to load existing state
-      const savedState = loadWalletState()
-      if (savedState) {
-        wallet.importState(savedState)
+        // Try to load existing state
+        const savedState = loadWalletState()
+        if (savedState) {
+          wallet.importState(savedState)
+        }
+
+        setWalletInstance(wallet)
+
+        // Get initial balance
+        const walletBalance = wallet.getBalance()
+        const walletNotes = wallet.getAvailableNotes()
+
+        setIsUnlocked(true)
+        setIsLoading(false)
+        setBalance(walletBalance)
+        setNotes(walletNotes)
+
+        return true
+      } catch (err) {
+        console.error('Failed to restore wallet:', err)
+        // Clear invalid signature
+        clearSignature()
+        setHasStoredSignature(false)
+        setIsLoading(false)
+        setError('Failed to restore wallet session')
+        return false
       }
-
-      setWalletInstance(wallet)
-
-      // Get initial balance
-      const walletBalance = wallet.getBalance()
-      const walletNotes = wallet.getAvailableNotes()
-
-      setIsUnlocked(true)
-      setIsLoading(false)
-      setBalance(walletBalance)
-      setNotes(walletNotes)
-
-      return true
-    } catch (err) {
-      console.error('Failed to restore wallet:', err)
-      // Clear invalid signature
-      clearSignature()
-      setHasStoredSignature(false)
-      setIsLoading(false)
-      setError('Failed to restore wallet session')
-      return false
-    }
-  }, [address])
+    },
+    [address]
+  )
 
   /**
    * Unlock the privacy wallet by signing a message
@@ -291,7 +306,12 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
    * Generate a deposit note
    */
   const generateDeposit = useCallback(
-    (amount: bigint): { commitment: bigint; note: Omit<Note, 'leafIndex' | 'timestamp'> & { index: number } } | null => {
+    (
+      amount: bigint
+    ): {
+      commitment: bigint
+      note: Omit<Note, 'leafIndex' | 'timestamp'> & { index: number }
+    } | null => {
       if (!walletInstance) return null
 
       const { note, index } = walletInstance.generateDepositNote(amount)
@@ -410,6 +430,47 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
   )
 
   /**
+   * Mark multiple notes as spent (for consolidation)
+   */
+  const markNotesSpent = useCallback(
+    async (commitments: bigint[], txHash: string) => {
+      if (!walletInstance) return
+
+      for (const commitment of commitments) {
+        walletInstance.markNoteSpent(commitment, txHash)
+      }
+
+      const { saveWalletState } = await loadPrivacyWallet()
+      const walletBalance = walletInstance.getBalance()
+      const walletNotes = walletInstance.getAvailableNotes()
+
+      setBalance(walletBalance)
+      setNotes(walletNotes)
+      saveWalletState(walletInstance.exportState())
+    },
+    [walletInstance]
+  )
+
+  /**
+   * Prepare consolidation of multiple notes
+   */
+  const prepareConsolidation = useCallback(
+    async (notesToConsolidate: Note[]): Promise<ConsolidationPreparation | null> => {
+      if (!walletInstance) return null
+      return walletInstance.prepareConsolidation(notesToConsolidate)
+    },
+    [walletInstance]
+  )
+
+  /**
+   * Check if consolidation is possible
+   */
+  const canConsolidate = useCallback((): boolean => {
+    if (!walletInstance) return false
+    return walletInstance.canConsolidate()
+  }, [walletInstance])
+
+  /**
    * Lock the wallet (clear from memory, keep in storage)
    */
   const lock = useCallback(() => {
@@ -461,49 +522,46 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
   /**
    * Check the freshness of a merkle root for proof validity
    */
-  const checkRootFreshness = useCallback(
-    async (root: bigint): Promise<RootFreshness | null> => {
-      if (!POOL_CONTRACT) return null
+  const checkRootFreshness = useCallback(async (root: bigint): Promise<RootFreshness | null> => {
+    if (!POOL_CONTRACT) return null
 
-      try {
-        // Convert bigint to bytes32
-        const rootBytes = pad(toHex(root), { size: 32 }) as `0x${string}`
+    try {
+      // Convert bigint to bytes32
+      const rootBytes = pad(toHex(root), { size: 32 }) as `0x${string}`
 
-        const { createPublicClient, http } = await import('viem')
-        const { base, baseSepolia } = await import('viem/chains')
+      const { createPublicClient, http } = await import('viem')
+      const { base, baseSepolia } = await import('viem/chains')
 
-        const chain = RPC_URL?.includes('sepolia') ? baseSepolia : base
-        const client = createPublicClient({
-          chain,
-          transport: http(RPC_URL),
-        })
+      const chain = RPC_URL?.includes('sepolia') ? baseSepolia : base
+      const client = createPublicClient({
+        chain,
+        transport: http(RPC_URL),
+      })
 
-        const result = await client.readContract({
-          address: POOL_CONTRACT as `0x${string}`,
-          abi: ANON_POOL_ABI,
-          functionName: 'getRootStatus',
-          args: [rootBytes],
-        })
+      const result = await client.readContract({
+        address: POOL_CONTRACT as `0x${string}`,
+        abi: ANON_POOL_ABI,
+        functionName: 'getRootStatus',
+        args: [rootBytes],
+      })
 
-        const [exists, depositsAgo, depositsUntilExpiry] = result as [boolean, number, number]
+      const [exists, depositsAgo, depositsUntilExpiry] = result as [boolean, number, number]
 
-        // Get status and message from SDK helper
-        const { status, message } = getRootFreshnessStatus(exists, depositsUntilExpiry)
+      // Get status and message from SDK helper
+      const { status, message } = getRootFreshnessStatus(exists, depositsUntilExpiry)
 
-        return {
-          exists,
-          depositsAgo,
-          depositsUntilExpiry,
-          status,
-          message,
-        }
-      } catch (err) {
-        console.error('Failed to check root freshness:', err)
-        return null
+      return {
+        exists,
+        depositsAgo,
+        depositsUntilExpiry,
+        status,
+        message,
       }
-    },
-    []
-  )
+    } catch (err) {
+      console.error('Failed to check root freshness:', err)
+      return null
+    }
+  }, [])
 
   /**
    * Prepare a transfer with freshness check
@@ -552,11 +610,14 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
     prepareTransfer,
     prepareTransferWithFreshnessCheck,
     prepareWithdraw,
+    prepareConsolidation,
     findNoteForTransfer,
     findNoteForWithdraw,
     canAffordTransfer,
+    canConsolidate,
     getClaimCredentials,
     markNoteSpent,
+    markNotesSpent,
     formatBalance,
     checkRootFreshness,
 
@@ -564,11 +625,7 @@ export function PrivacyWalletProvider({ children }: { children: ReactNode }) {
     FRESHNESS_THRESHOLDS,
   }
 
-  return (
-    <PrivacyWalletContext.Provider value={value}>
-      {children}
-    </PrivacyWalletContext.Provider>
-  )
+  return <PrivacyWalletContext.Provider value={value}>{children}</PrivacyWalletContext.Provider>
 }
 
 export function usePrivacyWallet() {

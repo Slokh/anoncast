@@ -10,10 +10,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Loader2, Timer, CheckCircle, XCircle, Play, AlertCircle } from 'lucide-react'
-import {
-  generateProof,
-  type ProofInput,
-} from '@/lib/prover'
+import { generateProof, type ProofInput } from '@/lib/prover'
 import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
 import type { Note } from '@anon/sdk/core'
 import type { WithdrawPreparation } from '@anon/sdk/blockchain'
@@ -48,9 +45,8 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
   const [globalError, setGlobalError] = useState<string | null>(null)
 
   // Get the largest available note for benchmarking
-  const largestNote = notes.length > 0
-    ? [...notes].sort((a, b) => Number(b.amount - a.amount))[0]
-    : null
+  const largestNote =
+    notes.length > 0 ? [...notes].sort((a, b) => Number(b.amount - a.amount))[0] : null
 
   // Reset state when modal opens
   useEffect(() => {
@@ -89,7 +85,7 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
     }
     setRuns(initialRuns)
 
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     try {
       // Prepare withdraw data
@@ -118,7 +114,7 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
         updatedRuns[i].status = 'running'
         setRuns([...updatedRuns])
 
-        await new Promise(resolve => setTimeout(resolve, 50))
+        await new Promise((resolve) => setTimeout(resolve, 50))
 
         try {
           const totalStart = performance.now()
@@ -139,7 +135,9 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
           }
           setRuns([...updatedRuns])
 
-          console.log(`[Benchmark] ${proofMode} #${i + 1}: ${totalTime.toFixed(0)}ms (proof: ${result.proofGenerationTime.toFixed(0)}ms)`)
+          console.log(
+            `[Benchmark] ${proofMode} #${i + 1}: ${totalTime.toFixed(0)}ms (proof: ${result.proofGenerationTime.toFixed(0)}ms)`
+          )
         } catch (err) {
           console.error(`[Benchmark] ${proofMode} #${i + 1} error:`, err)
           const errorMsg = err instanceof Error ? err.message : String(err)
@@ -173,12 +171,17 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
   }
 
   // Calculate averages for completed runs
-  const completedRuns = runs.filter(r => r.status === 'complete')
-  const averages = completedRuns.length > 0 ? {
-    verifierLoadTime: completedRuns.reduce((sum, r) => sum + r.verifierLoadTime, 0) / completedRuns.length,
-    proofGenerationTime: completedRuns.reduce((sum, r) => sum + r.proofGenerationTime, 0) / completedRuns.length,
-    totalTime: completedRuns.reduce((sum, r) => sum + r.totalTime, 0) / completedRuns.length,
-  } : null
+  const completedRuns = runs.filter((r) => r.status === 'complete')
+  const averages =
+    completedRuns.length > 0
+      ? {
+          verifierLoadTime:
+            completedRuns.reduce((sum, r) => sum + r.verifierLoadTime, 0) / completedRuns.length,
+          proofGenerationTime:
+            completedRuns.reduce((sum, r) => sum + r.proofGenerationTime, 0) / completedRuns.length,
+          totalTime: completedRuns.reduce((sum, r) => sum + r.totalTime, 0) / completedRuns.length,
+        }
+      : null
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -257,7 +260,10 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
                   </thead>
                   <tbody className="divide-y divide-border">
                     {runs.map((run) => (
-                      <tr key={run.iteration} className={run.status === 'running' ? 'bg-primary/5' : ''}>
+                      <tr
+                        key={run.iteration}
+                        className={run.status === 'running' ? 'bg-primary/5' : ''}
+                      >
                         <td className="px-3 py-1.5">
                           <div className="flex items-center gap-2">
                             {run.status === 'pending' && (
@@ -323,11 +329,10 @@ export function BenchmarkModal({ open, onOpenChange, notes, prepareWithdraw }: P
           {state === 'complete' && (
             <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
               <p>
-                <strong>{PROOF_MODE_INFO[proofMode].label}:</strong> {PROOF_MODE_INFO[proofMode].description}
+                <strong>{PROOF_MODE_INFO[proofMode].label}:</strong>{' '}
+                {PROOF_MODE_INFO[proofMode].description}
               </p>
-              <p className="mt-1">
-                Change proof mode in the withdraw modal to compare.
-              </p>
+              <p className="mt-1">Change proof mode in the withdraw modal to compare.</p>
             </div>
           )}
 

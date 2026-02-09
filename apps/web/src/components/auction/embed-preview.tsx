@@ -35,7 +35,8 @@ function getEmbedType(url: string): 'farcaster' | 'twitter' | 'link' {
 function getDisplayUrl(url: string): string {
   try {
     const parsed = new URL(url)
-    const path = parsed.pathname.length > 20 ? parsed.pathname.slice(0, 20) + '...' : parsed.pathname
+    const path =
+      parsed.pathname.length > 20 ? parsed.pathname.slice(0, 20) + '...' : parsed.pathname
     return parsed.hostname + path
   } catch {
     return url.slice(0, 30) + '...'

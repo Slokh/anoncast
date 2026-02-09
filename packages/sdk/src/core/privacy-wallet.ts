@@ -442,6 +442,72 @@ WARNING: Never sign this message on a phishing site.`
   }
 
   /**
+   * Prepare consolidation of multiple notes into a single note
+   * Uses withdraw proofs with recipient = address(0) to signal consolidation
+   */
+  async prepareConsolidation(
+    notes: Note[]
+  ): Promise<{
+    noteInputs: Array<{
+      note: Note
+      merkleProof: { path: bigint[]; indices: number[]; root: bigint }
+      nullifierHash: bigint
+    }>
+    newNote: Omit<Note, 'leafIndex' | 'timestamp'>
+    newNoteIndex: number
+    totalAmount: bigint
+  } | null> {
+    if (notes.length === 0) {
+      return null
+    }
+
+    // Calculate total amount
+    const totalAmount = notes.reduce((sum, note) => sum + note.amount, 0n)
+
+    // Prepare data for each note
+    const noteInputs: Array<{
+      note: Note
+      merkleProof: { path: bigint[]; indices: number[]; root: bigint }
+      nullifierHash: bigint
+    }> = []
+
+    for (const note of notes) {
+      const merkleProof = this.getMerkleProof(note.leafIndex)
+      const nullifierHash = computeNullifierHash(note.nullifier)
+
+      noteInputs.push({
+        note,
+        merkleProof,
+        nullifierHash,
+      })
+    }
+
+    // Generate new consolidated note
+    const { note: newNote, index: newNoteIndex } = this.generateDepositNote(totalAmount)
+
+    return {
+      noteInputs,
+      newNote,
+      newNoteIndex,
+      totalAmount,
+    }
+  }
+
+  /**
+   * Get notes that can be consolidated (more than one available note)
+   */
+  getConsolidatableNotes(): Note[] {
+    return this.getAvailableNotes()
+  }
+
+  /**
+   * Check if consolidation is possible (has multiple notes)
+   */
+  canConsolidate(): boolean {
+    return this.getAvailableNotes().length > 1
+  }
+
+  /**
    * Mark a note as spent locally (before confirmation)
    */
   markNoteSpent(commitment: bigint, txHash: string): void {

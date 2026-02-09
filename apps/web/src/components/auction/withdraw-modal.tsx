@@ -9,14 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import {
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Eye,
-  Shield,
-  Zap,
-} from 'lucide-react'
+import { CheckCircle, AlertCircle, Loader2, Eye, Shield, Zap } from 'lucide-react'
 import { useWithdraw } from '@/hooks/use-withdraw'
 import { TOKEN_DECIMALS } from '@/config/chains'
 import { useProofMode, PROOF_MODE_INFO } from '@/hooks/use-proof-mode'
@@ -52,14 +45,7 @@ export function WithdrawModal({
   const { mode: proofMode, setMode: setProofMode } = useProofMode()
   const { formatUsd } = useTokenPrice()
 
-  const {
-    state,
-    error,
-    result,
-    withdraw,
-    reset,
-    formatTokenAmount,
-  } = useWithdraw()
+  const { state, error, result, withdraw, reset, formatTokenAmount } = useWithdraw()
 
   // Get available notes sorted by amount (largest first)
   const availableNotes = useMemo(() => {
@@ -70,7 +56,8 @@ export function WithdrawModal({
   // Note: selectedNoteIndex is reset in handleClose when the modal closes
   const effectiveSelectedIndex = selectedNoteIndex ?? (availableNotes.length > 0 ? 0 : null)
 
-  const selectedNote = effectiveSelectedIndex !== null ? availableNotes[effectiveSelectedIndex] : null
+  const selectedNote =
+    effectiveSelectedIndex !== null ? availableNotes[effectiveSelectedIndex] : null
   const canWithdraw = selectedNote && (state === 'idle' || state === 'error')
 
   const handleWithdraw = useCallback(async () => {
@@ -81,11 +68,7 @@ export function WithdrawModal({
       reset()
     }
 
-    const result = await withdraw(
-      selectedNote.amount,
-      prepareWithdraw,
-      markNoteSpent
-    )
+    const result = await withdraw(selectedNote.amount, prepareWithdraw, markNoteSpent)
 
     if (result) {
       // Sync to update balances
@@ -104,8 +87,7 @@ export function WithdrawModal({
     onOpenChange(false)
   }, [state, reset, onOpenChange])
 
-  const isProcessing =
-    state !== 'idle' && state !== 'success' && state !== 'error'
+  const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -115,9 +97,7 @@ export function WithdrawModal({
             <Eye className="h-5 w-5 text-yellow-500" />
             Withdraw from Privacy Pool
           </DialogTitle>
-          <DialogDescription>
-            Withdraw tokens back to your public wallet.
-          </DialogDescription>
+          <DialogDescription>Withdraw tokens back to your public wallet.</DialogDescription>
         </DialogHeader>
 
         {state === 'success' ? (
@@ -148,7 +128,9 @@ export function WithdrawModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Shield className="h-3 w-3 text-green-500" />
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Private Balance</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Private Balance
+                  </span>
                 </div>
                 <div className="text-right">
                   <div className="font-mono text-xl font-bold tabular-nums text-primary">
@@ -164,7 +146,9 @@ export function WithdrawModal({
             {/* Note Selection */}
             {availableNotes.length > 0 ? (
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Select note to withdraw</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Select note to withdraw
+                </label>
                 <div className="max-h-48 space-y-2 overflow-y-auto">
                   {availableNotes.map((note, index) => (
                     <button
@@ -172,7 +156,7 @@ export function WithdrawModal({
                       onClick={() => setSelectedNoteIndex(index)}
                       disabled={isProcessing}
                       className={`w-full cursor-pointer rounded-lg border p-3 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${
-                        selectedNoteIndex === index
+                        effectiveSelectedIndex === index
                           ? 'border-primary/30 bg-primary/10 ring-1 ring-primary/30'
                           : 'border-border/50 bg-muted/30 hover:bg-muted/50'
                       } disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
@@ -186,7 +170,9 @@ export function WithdrawModal({
                             {formatUnits(note.amount, TOKEN_DECIMALS)} ANON
                           </div>
                           {formatUsd(note.amount) && (
-                            <div className="text-xs text-muted-foreground">{formatUsd(note.amount)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatUsd(note.amount)}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -222,14 +208,16 @@ export function WithdrawModal({
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                          <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : ''}`}>
+                          <Icon
+                            className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}
+                          />
+                          <span
+                            className={`text-sm font-semibold ${isSelected ? 'text-primary' : ''}`}
+                          >
                             {info.label}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {info.description}
-                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">{info.description}</p>
                       </button>
                     )
                   })}
@@ -237,13 +225,14 @@ export function WithdrawModal({
               </div>
             )}
 
-
             {/* Error message */}
             {state === 'error' && error && (
               <div className="max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/10 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
-                  <p className="text-xs font-semibold uppercase tracking-wider text-destructive">Withdrawal Failed</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                    Withdrawal Failed
+                  </p>
                 </div>
                 <p className="break-all text-xs text-destructive/80">{error}</p>
               </div>

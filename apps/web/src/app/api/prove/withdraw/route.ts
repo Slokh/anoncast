@@ -13,7 +13,9 @@ const execAsync = promisify(exec)
 const CIRCUIT_DIR = join(process.cwd(), '../../packages/protocol/circuits/withdraw')
 
 // BN254 field modulus - all values must be less than this
-const FIELD_MODULUS = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617')
+const FIELD_MODULUS = BigInt(
+  '21888242871839275222246405745257275088548364400416034343698204186575808495617'
+)
 
 // Ensure a bigint is within the BN254 field
 function toField(value: bigint): bigint {
@@ -39,10 +41,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     const { note, merklePath, merkleIndices, merkleRoot, recipient } = body
     if (!note || !merklePath || !merkleIndices || !merkleRoot || !recipient) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Convert string values back to BigInt and ensure within field
@@ -119,8 +118,8 @@ recipient = ${toTomlHex(recipientBigInt)}
     // The header is 4 bytes, public inputs are 4 * 32 = 128 bytes
     // We need to strip these to get the raw 14080-byte proof for Solidity
     const HEADER_SIZE = 4
-    const PUBLIC_INPUTS_SIZE = 4 * 32  // 4 public inputs, each 32 bytes
-    const EXPECTED_PROOF_SIZE = 440 * 32  // 14080 bytes
+    const PUBLIC_INPUTS_SIZE = 4 * 32 // 4 public inputs, each 32 bytes
+    const EXPECTED_PROOF_SIZE = 440 * 32 // 14080 bytes
 
     // Strip header and public inputs to get just the proof
     const proofBytes = rawProofBytes.slice(HEADER_SIZE + PUBLIC_INPUTS_SIZE)

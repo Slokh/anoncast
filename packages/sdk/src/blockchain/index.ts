@@ -9,6 +9,9 @@ export type {
   WithdrawParams,
   PoolStats,
   RootStatus,
+  ConsolidateState,
+  ConsolidateResult,
+  ConsolidationPreparation,
 } from './types'
 
 // Pool client

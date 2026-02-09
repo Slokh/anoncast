@@ -32,15 +32,30 @@ export const EXPLORER_URL = 'https://basescan.org'
 const ANON_TOKEN_ADDRESS = '0x0Db510e79909666d6dEc7f5e49370838c16D950f' as const
 
 // Contract addresses from env
-export const CONTRACTS: ContractAddresses & { ANON_TOKEN: `0x${string}`; POOL: `0x${string}` | undefined; AUCTION: `0x${string}` | undefined } = {
+export const CONTRACTS: ContractAddresses & {
+  ANON_TOKEN: `0x${string}`
+  POOL: `0x${string}` | undefined
+  AUCTION: `0x${string}` | undefined
+  GATEWAY: `0x${string}` | undefined
+} = {
   anonToken: ANON_TOKEN_ADDRESS,
   pool: (process.env.NEXT_PUBLIC_POOL_CONTRACT as `0x${string}`) || undefined,
   auction: (process.env.NEXT_PUBLIC_AUCTION_CONTRACT as `0x${string}`) || undefined,
+  gateway: (process.env.NEXT_PUBLIC_GATEWAY_CONTRACT as `0x${string}`) || undefined,
 
   // Legacy aliases
-  get ANON_TOKEN() { return this.anonToken },
-  get POOL() { return this.pool },
-  get AUCTION() { return this.auction },
+  get ANON_TOKEN() {
+    return this.anonToken
+  },
+  get POOL() {
+    return this.pool
+  },
+  get AUCTION() {
+    return this.auction
+  },
+  get GATEWAY() {
+    return this.gateway
+  },
 }
 
 // Token decimals

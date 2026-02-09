@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
 // Generated from: packages/protocol/circuits/transfer/src/main.nr
-// Generated at: 2026-01-22T19:47:37Z
+// Generated at: 2026-01-24T19:35:36Z
 //
 // To regenerate: cd packages/protocol && ./scripts/generate-verifiers.sh
 

@@ -3,7 +3,8 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {AnonPool} from "../contracts/AnonPool.sol";
-import {AuctionSpender} from "../contracts/AuctionSpender.sol";
+import {AnonPoolAuctionSpender} from "../contracts/AnonPoolAuctionSpender.sol";
+import {AnonPoolGateway} from "../contracts/AnonPoolGateway.sol";
 import {WithdrawVerifier} from "../contracts/verifiers/WithdrawVerifier.sol";
 import {TransferVerifier} from "../contracts/verifiers/TransferVerifier.sol";
 
@@ -14,6 +15,11 @@ import {TransferVerifier} from "../contracts/verifiers/TransferVerifier.sol";
 contract DeployLocal is Script {
     // Real $ANON token on Base mainnet
     address constant ANON_TOKEN = 0x0Db510e79909666d6dEc7f5e49370838c16D950f;
+
+    // Uniswap V3 on Base
+    address constant SWAP_ROUTER = 0x2626664c2603336E57B271c5C0b26F421741e481;
+    address constant WETH = 0x4200000000000000000000000000000000000006;
+    address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
     function run() external {
         // Use Anvil's default account #0
@@ -42,19 +48,29 @@ contract DeployLocal is Script {
         );
         console.log("AnonPool:", address(pool));
 
-        // 3. Deploy AuctionSpender (slot starts now, 5 min settlement window)
-        AuctionSpender auctionSpender = new AuctionSpender(
+        // 3. Deploy AnonPoolGateway (swap + deposit in one tx)
+        AnonPoolGateway gateway = new AnonPoolGateway(
+            SWAP_ROUTER,
+            address(pool),
+            ANON_TOKEN,
+            WETH,
+            USDC
+        );
+        console.log("AnonPoolGateway:", address(gateway));
+
+        // 4. Deploy AnonPoolAuctionSpender (slot starts now, 5 min settlement window)
+        AnonPoolAuctionSpender auctionSpender = new AnonPoolAuctionSpender(
             address(pool),
             deployer, // deployer is also the operator for local testing
             block.timestamp, // slots start now
             0, // settlement window starts immediately after slot
             300 // 5 minute window
         );
-        console.log("AuctionSpender:", address(auctionSpender));
+        console.log("AnonPoolAuctionSpender:", address(auctionSpender));
 
-        // 4. Add AuctionSpender as approved spender
+        // 5. Add AnonPoolAuctionSpender as approved spender
         pool.addSpender(address(auctionSpender));
-        console.log("AuctionSpender added as spender");
+        console.log("AnonPoolAuctionSpender added as spender");
 
         vm.stopBroadcast();
 
@@ -67,6 +83,7 @@ contract DeployLocal is Script {
         console.log("NEXT_PUBLIC_TESTNET=true");
         console.log("NEXT_PUBLIC_TESTNET_RPC_URL=http://127.0.0.1:8545");
         console.log("NEXT_PUBLIC_POOL_CONTRACT=%s", address(pool));
+        console.log("NEXT_PUBLIC_GATEWAY_CONTRACT=%s", address(gateway));
         console.log("NEXT_PUBLIC_AUCTION_CONTRACT=%s", address(auctionSpender));
 
         console.log("\n========================================");

@@ -70,9 +70,7 @@ export function EmbedInput({ onSubmit, onCancel }: EmbedInputProps) {
         </button>
       </div>
 
-      {error && (
-        <p className="mt-2 text-xs text-destructive">{error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
     </div>
   )
 }

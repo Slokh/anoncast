@@ -92,6 +92,12 @@ check_dependency "bb"
 echo -e "${GREEN}✓ All dependencies found${NC}"
 echo ""
 
+# Reset database state
+echo "Resetting database state..."
+rm -f "$WEB_DIR/data/auction.db" "$WEB_DIR/data/auction.db-wal" "$WEB_DIR/data/auction.db-shm"
+echo -e "${GREEN}✓ Database reset${NC}"
+echo ""
+
 # Build circuits and regenerate verifiers
 if [ "$SKIP_CIRCUITS" = true ]; then
     echo -e "${YELLOW}Skipping circuit compilation (--skip-circuits)${NC}"
@@ -181,7 +187,8 @@ echo "$DEPLOY_OUTPUT"
 
 # Extract addresses from output
 POOL_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "AnonPool:" | awk '{print $2}')
-AUCTION_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "AuctionSpender:" | awk '{print $2}')
+GATEWAY_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "AnonPoolGateway:" | awk '{print $2}')
+AUCTION_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "AnonPoolAuctionSpender:" | awk '{print $2}')
 
 if [ -z "$POOL_ADDRESS" ]; then
     echo -e "${RED}Failed to extract contract addresses${NC}"
@@ -215,11 +222,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS sed requires empty string for -i
     sed -i '' "s|^NEXT_PUBLIC_RPC_URL=.*|NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545|" "$ENV_FILE"
     sed -i '' "s|^NEXT_PUBLIC_POOL_CONTRACT=.*|NEXT_PUBLIC_POOL_CONTRACT=$POOL_ADDRESS|" "$ENV_FILE"
+    sed -i '' "s|^NEXT_PUBLIC_GATEWAY_CONTRACT=.*|NEXT_PUBLIC_GATEWAY_CONTRACT=$GATEWAY_ADDRESS|" "$ENV_FILE"
     sed -i '' "s|^NEXT_PUBLIC_AUCTION_CONTRACT=.*|NEXT_PUBLIC_AUCTION_CONTRACT=$AUCTION_ADDRESS|" "$ENV_FILE"
 else
     # Linux sed
     sed -i "s|^NEXT_PUBLIC_RPC_URL=.*|NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545|" "$ENV_FILE"
     sed -i "s|^NEXT_PUBLIC_POOL_CONTRACT=.*|NEXT_PUBLIC_POOL_CONTRACT=$POOL_ADDRESS|" "$ENV_FILE"
+    sed -i "s|^NEXT_PUBLIC_GATEWAY_CONTRACT=.*|NEXT_PUBLIC_GATEWAY_CONTRACT=$GATEWAY_ADDRESS|" "$ENV_FILE"
     sed -i "s|^NEXT_PUBLIC_AUCTION_CONTRACT=.*|NEXT_PUBLIC_AUCTION_CONTRACT=$AUCTION_ADDRESS|" "$ENV_FILE"
 fi
 
@@ -230,6 +239,7 @@ echo ""
 echo -e "${BLUE}Contract Addresses:${NC}"
 echo "  \$ANON Token:  $ANON_TOKEN"
 echo "  AnonPool:     $POOL_ADDRESS"
+echo "  Gateway:      $GATEWAY_ADDRESS"
 echo "  Auction:      $AUCTION_ADDRESS"
 echo ""
 

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {AuctionSpender, IAnonPool} from "../contracts/AuctionSpender.sol";
+import {AnonPoolAuctionSpender, IAnonPool} from "../contracts/AnonPoolAuctionSpender.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @notice Mock AnonPool for testing
@@ -71,8 +71,8 @@ contract MockERC20 {
     }
 }
 
-contract AuctionSpenderTest is Test {
-    AuctionSpender public spender;
+contract AnonPoolAuctionSpenderTest is Test {
+    AnonPoolAuctionSpender public spender;
     MockAnonPool public mockPool;
     MockERC20 public mockToken;
 
@@ -97,7 +97,7 @@ contract AuctionSpenderTest is Test {
         mockToken = new MockERC20();
         mockPool = new MockAnonPool(address(mockToken));
 
-        spender = new AuctionSpender(
+        spender = new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -121,8 +121,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnZeroAnonPool() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.ZeroAddress.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.ZeroAddress.selector);
+        new AnonPoolAuctionSpender(
             address(0),
             operator,
             SLOT_START_TIME,
@@ -133,8 +133,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnZeroOperator() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.ZeroAddress.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.ZeroAddress.selector);
+        new AnonPoolAuctionSpender(
             address(mockPool),
             address(0),
             SLOT_START_TIME,
@@ -145,8 +145,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnZeroSlotStartTime() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.InvalidSlotStartTime.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.InvalidSlotStartTime.selector);
+        new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             0,
@@ -157,8 +157,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnInvalidWindow_EndLessThanStart() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.InvalidSettlementWindow.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.InvalidSettlementWindow.selector);
+        new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -169,8 +169,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnInvalidWindow_EndEqualsStart() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.InvalidSettlementWindow.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.InvalidSettlementWindow.selector);
+        new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -181,8 +181,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnWindowTooSmall() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.InvalidSettlementWindow.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.InvalidSettlementWindow.selector);
+        new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -193,8 +193,8 @@ contract AuctionSpenderTest is Test {
 
     function test_Constructor_RevertsOnOverlappingWindows() public {
         vm.prank(owner);
-        vm.expectRevert(AuctionSpender.InvalidSettlementWindow.selector);
-        new AuctionSpender(
+        vm.expectRevert(AnonPoolAuctionSpender.InvalidSettlementWindow.selector);
+        new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -206,7 +206,7 @@ contract AuctionSpenderTest is Test {
     function test_Constructor_AcceptsMaxValidWindow() public {
         vm.prank(owner);
         // Window of exactly SLOT_DURATION should be allowed
-        AuctionSpender validSpender = new AuctionSpender(
+        AnonPoolAuctionSpender validSpender = new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -219,7 +219,7 @@ contract AuctionSpenderTest is Test {
     function test_Constructor_AcceptsMinValidWindow() public {
         vm.prank(owner);
         // Window of exactly MIN_SETTLEMENT_WINDOW should be allowed
-        AuctionSpender validSpender = new AuctionSpender(
+        AnonPoolAuctionSpender validSpender = new AnonPoolAuctionSpender(
             address(mockPool),
             operator,
             SLOT_START_TIME,
@@ -281,7 +281,7 @@ contract AuctionSpenderTest is Test {
         vm.warp(SLOT_START_TIME + 1 hours + 1 minutes);
 
         vm.prank(randomUser);
-        vm.expectRevert(AuctionSpender.OnlyOperator.selector);
+        vm.expectRevert(AnonPoolAuctionSpender.OnlyOperator.selector);
         spender.settle(
             0,
             testProof,
@@ -310,7 +310,7 @@ contract AuctionSpenderTest is Test {
             0
         );
 
-        vm.expectRevert(AuctionSpender.SlotAlreadySettled.selector);
+        vm.expectRevert(AnonPoolAuctionSpender.SlotAlreadySettled.selector);
         spender.settle(
             0,
             testProof,
@@ -351,7 +351,7 @@ contract AuctionSpenderTest is Test {
         vm.warp(SLOT_START_TIME - 1);
 
         vm.prank(operator);
-        vm.expectRevert(AuctionSpender.BeforeSlotStartTime.selector);
+        vm.expectRevert(AnonPoolAuctionSpender.BeforeSlotStartTime.selector);
         spender.settle(
             0,
             testProof,
@@ -368,7 +368,7 @@ contract AuctionSpenderTest is Test {
         vm.warp(SLOT_START_TIME + 30 minutes);
 
         vm.prank(operator);
-        vm.expectRevert(AuctionSpender.SlotInFuture.selector);
+        vm.expectRevert(AnonPoolAuctionSpender.SlotInFuture.selector);
         spender.settle(
             1,
             testProof,
@@ -385,7 +385,7 @@ contract AuctionSpenderTest is Test {
         vm.warp(SLOT_START_TIME + 59 minutes);
 
         vm.prank(operator);
-        vm.expectRevert(AuctionSpender.SlotNotYetSettleable.selector);
+        vm.expectRevert(AnonPoolAuctionSpender.SlotNotYetSettleable.selector);
         spender.settle(
             0,
             testProof,
@@ -402,7 +402,7 @@ contract AuctionSpenderTest is Test {
         vm.warp(SLOT_START_TIME + 1 hours + 6 minutes);
 
         vm.prank(operator);
-        vm.expectRevert(AuctionSpender.SlotSettlementWindowClosed.selector);
+        vm.expectRevert(AnonPoolAuctionSpender.SlotSettlementWindowClosed.selector);
         spender.settle(
             0,
             testProof,

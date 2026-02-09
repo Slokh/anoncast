@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -20,11 +20,11 @@ interface IAnonPool {
     ) external;
 }
 
-/// @title AuctionSpender
+/// @title AnonPoolAuctionSpender
 /// @notice Safety wrapper for AnonPool.transfer() with slot-based rate limiting
 /// @dev Allows only one settlement per slot to prevent double-spending from compromised keys.
 ///      All configuration is immutable - deploy a new contract to change settings.
-contract AuctionSpender is Ownable, Pausable, ReentrancyGuard {
+contract AnonPoolAuctionSpender is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ============ Constants ============
@@ -91,7 +91,7 @@ contract AuctionSpender is Ownable, Pausable, ReentrancyGuard {
 
     // ============ Constructor ============
 
-    /// @notice Deploy the AuctionSpender contract
+    /// @notice Deploy the AnonPoolAuctionSpender contract
     /// @param _anonPool Address of the AnonPool contract
     /// @param _operator Address of the backend operator
     /// @param _slotStartTime Timestamp when slot 0 starts

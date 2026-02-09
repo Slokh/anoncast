@@ -49,10 +49,7 @@ export function ProofFreshnessWarning({
   const style = statusStyles[freshness.status]
 
   return (
-    <div
-      className={`rounded-lg border p-4 ${style.container} ${className}`}
-      role="alert"
-    >
+    <div className={`rounded-lg border p-4 ${style.container} ${className}`} role="alert">
       <div className="flex items-start gap-3">
         <span className="text-xl" aria-hidden="true">
           {style.icon}
@@ -63,8 +60,8 @@ export function ProofFreshnessWarning({
 
           {freshness.status !== 'expired' && (
             <p className="text-xs mt-2 opacity-75">
-              {freshness.depositsUntilExpiry} deposits until expiry •{' '}
-              {freshness.depositsAgo} deposits since this root
+              {freshness.depositsUntilExpiry} deposits until expiry • {freshness.depositsAgo}{' '}
+              deposits since this root
             </p>
           )}
 
@@ -89,11 +86,7 @@ export function ProofFreshnessWarning({
 /**
  * Inline freshness indicator for compact displays
  */
-export function ProofFreshnessIndicator({
-  freshness,
-}: {
-  freshness: RootFreshness | null
-}) {
+export function ProofFreshnessIndicator({ freshness }: { freshness: RootFreshness | null }) {
   if (!freshness) return null
 
   const statusConfig = {

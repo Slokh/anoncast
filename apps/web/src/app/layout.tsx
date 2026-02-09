@@ -39,9 +39,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${GeistSans.className} antialiased`}>
         <WalletProvider>
-          <PrivacyWalletProvider>
-            {children}
-          </PrivacyWalletProvider>
+          <PrivacyWalletProvider>{children}</PrivacyWalletProvider>
         </WalletProvider>
       </body>
     </html>

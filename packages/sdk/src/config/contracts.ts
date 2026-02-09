@@ -80,6 +80,21 @@ export const ANON_POOL_ABI = [
     ],
     outputs: [],
   },
+  // Consolidate - merge multiple notes into one
+  {
+    name: 'consolidate',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'proofs', type: 'bytes[]' },
+      { name: 'nullifierHashes', type: 'bytes32[]' },
+      { name: 'merkleRoots', type: 'bytes32[]' },
+      { name: 'amounts', type: 'uint256[]' },
+      { name: 'newCommitment', type: 'bytes32' },
+      { name: 'totalAmount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
   // View functions
   {
     name: 'getPoolStats',
@@ -153,6 +168,77 @@ export const ANON_POOL_ABI = [
       { name: 'nullifierHash', type: 'bytes32', indexed: true },
       { name: 'recipient', type: 'address', indexed: true },
       { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'Consolidation',
+    type: 'event',
+    inputs: [
+      { name: 'nullifierHashes', type: 'bytes32[]', indexed: false },
+      { name: 'newCommitment', type: 'bytes32', indexed: true },
+      { name: 'totalAmount', type: 'uint256', indexed: false },
+      { name: 'leafIndex', type: 'uint32', indexed: false },
+    ],
+  },
+] as const
+
+export const ANON_POOL_GATEWAY_ABI = [
+  // depositWithETH - swap ETH to ANON and deposit
+  {
+    name: 'depositWithETH',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [
+      { name: 'commitment', type: 'bytes32' },
+      { name: 'minAmountOut', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  // depositWithUSDC - swap USDC to ANON and deposit
+  {
+    name: 'depositWithUSDC',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'commitment', type: 'bytes32' },
+      { name: 'amountIn', type: 'uint256' },
+      { name: 'minAmountOut', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  // depositExactWithETH - swap exact amount of ETH needed for specific ANON amount
+  {
+    name: 'depositExactWithETH',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [
+      { name: 'commitment', type: 'bytes32' },
+      { name: 'amountOut', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  // depositExactWithUSDC - swap exact USDC needed for specific ANON amount
+  {
+    name: 'depositExactWithUSDC',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'commitment', type: 'bytes32' },
+      { name: 'amountOut', type: 'uint256' },
+      { name: 'maxAmountIn', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  // Events
+  {
+    name: 'SwapAndDeposit',
+    type: 'event',
+    inputs: [
+      { name: 'sender', type: 'address', indexed: true },
+      { name: 'tokenIn', type: 'address', indexed: true },
+      { name: 'amountIn', type: 'uint256', indexed: false },
+      { name: 'amountOut', type: 'uint256', indexed: false },
+      { name: 'commitment', type: 'bytes32', indexed: true },
     ],
   },
 ] as const

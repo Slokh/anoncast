@@ -4,14 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useAccount } from 'wagmi'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { Loader2, Shield, Eye, Trash2, MessageSquare, Timer, Coins } from 'lucide-react'
+import { Loader2, Shield, Eye, Trash2, MessageSquare, Timer, Coins, Merge } from 'lucide-react'
 import { IS_LOCAL, NETWORK_NAME } from '@/config/chains'
 import { usePrivacyWallet } from '@/providers/privacy-wallet'
 import { useDeposit } from '@/hooks/use-deposit'
 import { useTokenPrice } from '@/hooks/use-token-price'
 import { BenchmarkModal } from './benchmark-modal'
+import { BuyModal } from './auction/buy-modal'
 import { DepositModal } from './auction/deposit-modal'
 import { WithdrawModal } from './auction/withdraw-modal'
+import { ConsolidateModal } from './auction/consolidate-modal'
 
 export function Header() {
   const { isConnected, address } = useAccount()
@@ -34,8 +36,10 @@ export function Header() {
 
   const { tokenBalance, formatTokenAmount, refetchBalance } = useDeposit()
   const { formatUsd } = useTokenPrice()
+  const [showBuyModal, setShowBuyModal] = useState(false)
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [showConsolidateModal, setShowConsolidateModal] = useState(false)
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false)
   const [pendingUnlock, setPendingUnlock] = useState(false)
   const [mockBidType, setMockBidType] = useState<string>('none')
@@ -155,7 +159,7 @@ export function Header() {
             <button
               onClick={() => {
                 const modes = ['none', 'text', 'image', 'link'] as const
-                const currentIndex = modes.indexOf(mockBidType as typeof modes[number])
+                const currentIndex = modes.indexOf(mockBidType as (typeof modes)[number])
                 const nextIndex = (currentIndex + 1) % modes.length
                 const nextMode = modes[nextIndex]
                 localStorage.setItem('anon:mockBid', nextMode)
@@ -170,7 +174,11 @@ export function Header() {
             </button>
             <button
               onClick={() => {
-                if (confirm('Clear all wallet data from localStorage? You will need to reconnect and any unsynced notes may be lost.')) {
+                if (
+                  confirm(
+                    'Clear all wallet data from localStorage? You will need to reconnect and any unsynced notes may be lost.'
+                  )
+                ) {
                   clearAllData()
                   window.location.reload()
                 }
@@ -268,7 +276,9 @@ export function Header() {
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <Eye className="h-3 w-3 text-yellow-500" />
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Public</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Public
+                      </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="text-right">
@@ -276,7 +286,9 @@ export function Header() {
                           {formatTokenAmount(walletBal)} ANON
                         </div>
                         {formatUsd(walletBal) && (
-                          <div className="text-[10px] text-muted-foreground">{formatUsd(walletBal)}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {formatUsd(walletBal)}
+                          </div>
                         )}
                       </div>
                       {isSyncing && (
@@ -284,24 +296,12 @@ export function Header() {
                       )}
                     </div>
                   </div>
-                  <div className="flex border-t border-white/10">
-                    <a
-                      href="https://app.uniswap.org/swap?outputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex flex-1 items-center justify-center gap-1 bg-white/5 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10"
-                    >
-                      Buy
-                    </a>
-                    <a
-                      href="https://app.uniswap.org/swap?inputCurrency=0x0Db510e79909666d6dEc7f5e49370838c16D950f&chain=base"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex flex-1 items-center justify-center gap-1 border-l border-white/10 bg-white/5 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10"
-                    >
-                      Sell
-                    </a>
-                  </div>
+                  <button
+                    onClick={() => setShowBuyModal(true)}
+                    className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-white/10 bg-white/5 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10"
+                  >
+                    Buy
+                  </button>
                 </div>
 
                 {/* Private Balance */}
@@ -309,7 +309,9 @@ export function Header() {
                   <div className="flex items-center justify-between px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <Shield className="h-3 w-3 text-green-500" />
-                      <span className="text-[10px] uppercase tracking-wider text-primary/70">Private</span>
+                      <span className="text-[10px] uppercase tracking-wider text-primary/70">
+                        Private
+                      </span>
                     </div>
                     <div className="text-right">
                       <div className="font-mono text-sm font-bold tabular-nums text-primary">
@@ -324,17 +326,27 @@ export function Header() {
                     <button
                       onClick={() => setShowDepositModal(true)}
                       disabled={walletBal === 0n}
-                      className="flex flex-1 cursor-pointer items-center justify-center gap-1 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-1 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary/5"
                     >
                       Deposit
                     </button>
                     <button
                       onClick={() => setShowWithdrawModal(true)}
                       disabled={poolBal === 0n}
-                      className="flex flex-1 cursor-pointer items-center justify-center gap-1 border-l border-primary/20 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-1 border-l border-primary/20 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary/5"
                     >
                       Withdraw
                     </button>
+                    {notes.length > 1 && (
+                      <button
+                        onClick={() => setShowConsolidateModal(true)}
+                        className="flex flex-1 cursor-pointer items-center justify-center gap-1 border-l border-primary/20 bg-primary/5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10"
+                        title="Merge multiple notes into one"
+                      >
+                        <Merge className="h-2.5 w-2.5" />
+                        Merge
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -349,6 +361,12 @@ export function Header() {
           )}
         </div>
       </div>
+
+      <BuyModal
+        open={showBuyModal}
+        onOpenChange={setShowBuyModal}
+        onSuccess={() => setShowBuyModal(false)}
+      />
 
       <DepositModal
         open={showDepositModal}
@@ -368,6 +386,12 @@ export function Header() {
         markNoteSpent={markNoteSpent}
         sync={sync}
         formatBalance={formatBalance}
+      />
+
+      <ConsolidateModal
+        open={showConsolidateModal}
+        onOpenChange={setShowConsolidateModal}
+        onSuccess={() => setShowConsolidateModal(false)}
       />
 
       <BenchmarkModal

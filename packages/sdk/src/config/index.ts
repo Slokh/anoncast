@@ -1,5 +1,5 @@
 // Contract ABIs
-export { ERC20_ABI, ANON_POOL_ABI } from './contracts'
+export { ERC20_ABI, ANON_POOL_ABI, ANON_POOL_GATEWAY_ABI } from './contracts'
 
 // Chain utilities
 export {

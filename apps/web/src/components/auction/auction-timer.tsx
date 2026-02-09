@@ -28,14 +28,16 @@ const MOCK_BIDS: Record<Exclude<MockBidType, 'none'>, Partial<AuctionState>> = {
     highestBid: '42000000000000000000', // 42 tokens
     bidCount: 3,
     highestBidContent: {
-      content: 'gm anons! this is what a winning bid post looks like. it can be up to 320 characters and will be posted to the timeline when the auction ends. 🎭',
+      content:
+        'gm anons! this is what a winning bid post looks like. it can be up to 320 characters and will be posted to the timeline when the auction ends. 🎭',
     },
   },
   image: {
     highestBid: '69000000000000000000', // 69 tokens
     bidCount: 5,
     highestBidContent: {
-      content: 'check out this rare pepe i found. mass posting this everywhere for maximum exposure.',
+      content:
+        'check out this rare pepe i found. mass posting this everywhere for maximum exposure.',
       images: ['https://i.imgflip.com/9f66pz.jpg'],
     },
   },
@@ -43,7 +45,7 @@ const MOCK_BIDS: Record<Exclude<MockBidType, 'none'>, Partial<AuctionState>> = {
     highestBid: '100000000000000000000', // 100 tokens
     bidCount: 7,
     highestBidContent: {
-      content: 'just mass bought the dip. here\'s my alpha on why ANON is going to 10x from here.',
+      content: "just mass bought the dip. here's my alpha on why ANON is going to 10x from here.",
       embeds: ['https://dexscreener.com/base/0x0Db510e79909666d6dEc7f5e49370838c16D950f'],
     },
   },
@@ -105,15 +107,25 @@ export function AuctionTimer() {
 
     fetchState()
     const interval = setInterval(fetchState, 30000) // Refresh every 30s
-    return () => clearInterval(interval)
+
+    // Listen for bid updates from PostForm
+    const handleBidUpdate = () => fetchState()
+    window.addEventListener('auctionBidUpdate', handleBidUpdate)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('auctionBidUpdate', handleBidUpdate)
+    }
   }, [])
 
   // Apply mock bid overlay if enabled
   const mockBid = mockBidType !== 'none' ? MOCK_BIDS[mockBidType] : null
-  const displayState = state ? {
-    ...state,
-    ...(mockBid || {}),
-  } : null
+  const displayState = state
+    ? {
+        ...state,
+        ...(mockBid || {}),
+      }
+    : null
 
   // Countdown timer
   useEffect(() => {
@@ -198,8 +210,12 @@ export function AuctionTimer() {
         {/* Current highest bid content */}
         {hasContent && (
           <div className="-mx-4 mt-3 border-t border-border/50 px-4 pt-3">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Current leading post</div>
-            <p className="mt-2 text-sm text-foreground">{displayState.highestBidContent!.content}</p>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
+              Current leading post
+            </div>
+            <p className="mt-2 text-sm text-foreground">
+              {displayState.highestBidContent!.content}
+            </p>
             {displayState.highestBidContent!.images?.[0] && (
               <div className="mt-2 overflow-hidden rounded-lg">
                 <img

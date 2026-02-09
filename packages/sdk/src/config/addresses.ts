@@ -5,6 +5,7 @@ export type ContractAddresses = {
   anonToken: `0x${string}`
   pool?: `0x${string}`
   auction?: `0x${string}`
+  gateway?: `0x${string}`
 }
 
 // Known contract addresses
@@ -12,15 +13,17 @@ const ADDRESSES: Record<SupportedChainId, ContractAddresses> = {
   [SUPPORTED_CHAIN_IDS.BASE_MAINNET]: {
     // Real $ANON token on Base mainnet
     anonToken: '0x0Db510e79909666d6dEc7f5e49370838c16D950f',
-    // Pool and auction addresses will be set after mainnet deployment
+    // Pool, auction, and gateway addresses will be set after mainnet deployment
     pool: undefined,
     auction: undefined,
+    gateway: undefined,
   },
   [SUPPORTED_CHAIN_IDS.BASE_SEPOLIA]: {
     // Testnet token (to be deployed)
     anonToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
     pool: undefined,
     auction: undefined,
+    gateway: undefined,
   },
 }
 
@@ -33,6 +36,7 @@ export function getContractAddresses(
     anonToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
     pool: undefined,
     auction: undefined,
+    gateway: undefined,
   }
 
   return {

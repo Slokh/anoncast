@@ -20,9 +20,12 @@ export function PoolStats() {
   const totalDeposited = stats?.[0] ?? 0n
   const leafCount = stats?.[1] ?? 0
 
-  const formattedTotal = Number(formatUnits(totalDeposited, TOKEN_DECIMALS)).toLocaleString(undefined, {
-    maximumFractionDigits: 0,
-  })
+  const formattedTotal = Number(formatUnits(totalDeposited, TOKEN_DECIMALS)).toLocaleString(
+    undefined,
+    {
+      maximumFractionDigits: 0,
+    }
+  )
 
   return (
     <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
@@ -33,7 +36,9 @@ export function PoolStats() {
             {isLoading ? (
               <span className="text-muted-foreground animate-pulse">...</span>
             ) : (
-              <>{formattedTotal} <span className="text-sm font-normal text-primary">ANON</span></>
+              <>
+                {formattedTotal} <span className="text-sm font-normal text-primary">ANON</span>
+              </>
             )}
           </p>
         </div>

@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// @title IWithdrawVerifier
@@ -57,7 +57,7 @@ interface ITransferVerifier {
 /// @dev Users deposit and can withdraw. Only approved spenders can initiate transfers
 ///      on behalf of users. This prevents mixing while allowing server-mediated
 ///      transfers for specific use cases (e.g., payments, subscriptions, tipping).
-contract AnonPool is ReentrancyGuard, Ownable, Pausable {
+contract AnonPool is ReentrancyGuard, Ownable2Step, Pausable {
     using SafeERC20 for IERC20;
 
     // ============ Constants ============
@@ -138,6 +138,13 @@ contract AnonPool is ReentrancyGuard, Ownable, Pausable {
     event SpenderAdded(address indexed spender);
     event SpenderRemoved(address indexed spender);
 
+    event Consolidation(
+        bytes32[] nullifierHashes,
+        bytes32 indexed newCommitment,
+        uint256 totalAmount,
+        uint32 leafIndex
+    );
+
     // ============ Errors ============
 
     error InvalidProof();
@@ -153,6 +160,9 @@ contract AnonPool is ReentrancyGuard, Ownable, Pausable {
     error ZeroAddress();
     error LevelOutOfBounds();
     error InvalidVerifier();
+    error EmptyConsolidation();
+    error ArrayLengthMismatch();
+    error AmountMismatch();
 
     // ============ Modifiers ============
 
@@ -355,6 +365,71 @@ contract AnonPool is ReentrancyGuard, Ownable, Pausable {
         }
 
         emit Transfer(nullifierHash, outputCommitment, outputAmount, changeCommitment, changeAmount);
+    }
+
+    // ============ Consolidation (user-initiated) ============
+
+    /// @notice Consolidate multiple notes into a single note
+    /// @dev Uses existing withdraw proofs with recipient = address(0) to signal consolidation.
+    ///      No tokens are transferred - they stay in the pool. This preserves privacy by
+    ///      keeping all operations within the pool.
+    /// @param proofs Array of ZK withdraw proofs (one per note being consolidated)
+    /// @param nullifierHashes Array of nullifier hashes for each note
+    /// @param merkleRoots Array of merkle roots for each proof
+    /// @param amounts Array of amounts for each note
+    /// @param newCommitment The commitment for the consolidated note
+    /// @param totalAmount The total amount (must equal sum of amounts array)
+    function consolidate(
+        bytes[] calldata proofs,
+        bytes32[] calldata nullifierHashes,
+        bytes32[] calldata merkleRoots,
+        uint256[] calldata amounts,
+        bytes32 newCommitment,
+        uint256 totalAmount
+    ) external nonReentrant whenNotPaused {
+        uint256 numNotes = proofs.length;
+
+        // Validate inputs
+        if (numNotes == 0) revert EmptyConsolidation();
+        if (numNotes != nullifierHashes.length) revert ArrayLengthMismatch();
+        if (numNotes != merkleRoots.length) revert ArrayLengthMismatch();
+        if (numNotes != amounts.length) revert ArrayLengthMismatch();
+        if (newCommitment == bytes32(0)) revert InvalidCommitment();
+        if (noteAmounts[newCommitment] != 0) revert CommitmentAlreadyExists();
+        if (nextLeafIndex >= MAX_LEAVES) revert TreeFull();
+
+        uint256 computedTotal = 0;
+
+        // Verify each withdraw proof and mark nullifiers as spent
+        for (uint256 i = 0; i < numNotes; i++) {
+            if (nullifierSpent[nullifierHashes[i]]) revert NullifierAlreadySpent();
+            if (!isKnownRoot(merkleRoots[i])) revert InvalidMerkleRoot();
+
+            // Verify withdraw proof with recipient = address(0) (consolidation marker)
+            // This ensures user authorized moving these funds within the pool
+            if (!_verifyWithdrawProof(
+                proofs[i],
+                nullifierHashes[i],
+                merkleRoots[i],
+                amounts[i],
+                address(0)
+            )) {
+                revert InvalidProof();
+            }
+
+            nullifierSpent[nullifierHashes[i]] = true;
+            computedTotal += amounts[i];
+        }
+
+        // Verify total amount matches
+        if (computedTotal != totalAmount) revert AmountMismatch();
+
+        // Insert single new commitment
+        noteAmounts[newCommitment] = totalAmount;
+        uint32 leafIndex = _insertLeaf(newCommitment);
+        commitmentIndex[newCommitment] = leafIndex + 1;
+
+        emit Consolidation(nullifierHashes, newCommitment, totalAmount, leafIndex);
     }
 
     // ============ View Functions ============

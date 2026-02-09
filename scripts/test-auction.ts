@@ -1,6 +1,11 @@
 #!/usr/bin/env bun
 /**
- * End-to-end test script for validating auction/bid flow
+ * End-to-end test script for validating the complete user flow:
+ * 1. Buy ANON tokens with ETH via AnonPoolGateway (swap + deposit in one tx)
+ * 2. Submit multiple bids with increasing amounts
+ * 3. Test invalid bid (lower than current highest)
+ * 4. Test bid with missing fields
+ * 5. Verify auction state updates correctly
  *
  * Prerequisites:
  * 1. Run `./scripts/local-dev.sh` to start Anvil and deploy contracts
@@ -8,13 +13,6 @@
  * Usage:
  *   ./scripts/test-auction.sh  (recommended - manages test server)
  *   bun run scripts/test-auction.ts  (requires running server)
- *
- * Tests:
- * 1. Create a deposit to fund the wallet
- * 2. Submit multiple bids with increasing amounts
- * 3. Test invalid bid (lower than current highest)
- * 4. Test bid with missing fields
- * 5. Verify auction state updates correctly
  */
 
 import { config } from "dotenv";
@@ -30,6 +28,7 @@ import {
   parseUnits,
   parseEther,
   formatUnits,
+  formatEther,
   pad,
   toHex,
 } from "viem";
@@ -38,27 +37,29 @@ import { base } from "viem/chains";
 
 // Import from SDK
 import { PrivacyWallet, computeNullifierHash } from "../packages/sdk/src/core";
-import { ERC20_ABI, ANON_POOL_ABI } from "../packages/sdk/src/config";
+import { ANON_POOL_GATEWAY_ABI } from "../packages/sdk/src/config";
 
 // Configuration from .env
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8545";
 const API_URL = process.env.API_URL || "http://localhost:3000";
-const ANON_TOKEN = (process.env.ANON_TOKEN ||
-  "0x0Db510e79909666d6dEc7f5e49370838c16D950f") as `0x${string}`;
+
+// Uniswap V3 addresses on Base
+const QUOTER_V2 = "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a" as `0x${string}`;
+const WETH = "0x4200000000000000000000000000000000000006" as `0x${string}`;
+const ANON_TOKEN = "0x0Db510e79909666d6dEc7f5e49370838c16D950f" as `0x${string}`;
 
 // Anvil's default test account #0 (for ETH funding)
 const ANVIL_PRIVATE_KEY_0 =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
 
-// Whale address holding $ANON (used via Anvil impersonation for funding)
-const WHALE_ADDRESS = "0x8117efF53BA83D42408570c69C6da85a2Bb6CA05" as const;
-
 // Generate a fresh account for each test run
 const PRIVATE_KEY = generatePrivateKey();
 
-// Get pool address from env
+// Get contract addresses from env
 const POOL_ADDRESS = (process.env.POOL_ADDRESS ||
   process.env.NEXT_PUBLIC_POOL_CONTRACT) as `0x${string}`;
+const GATEWAY_ADDRESS = (process.env.GATEWAY_ADDRESS ||
+  process.env.NEXT_PUBLIC_GATEWAY_CONTRACT) as `0x${string}`;
 
 if (!POOL_ADDRESS) {
   console.error("Error: No pool address found.");
@@ -68,14 +69,51 @@ if (!POOL_ADDRESS) {
   process.exit(1);
 }
 
+if (!GATEWAY_ADDRESS) {
+  console.error("Error: No gateway address found.");
+  console.error(
+    "Run ./scripts/local-dev.sh first, or set GATEWAY_ADDRESS env var",
+  );
+  process.exit(1);
+}
+
+// Quoter ABI for getting swap quotes
+const QUOTER_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "fee", type: "uint24" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "quoteExactInputSingle",
+    outputs: [
+      { name: "amountOut", type: "uint256" },
+      { name: "sqrtPriceX96After", type: "uint160" },
+      { name: "initializedTicksCrossed", type: "uint32" },
+      { name: "gasEstimate", type: "uint256" },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
 console.log("========================================");
-console.log("  AnonPool Auction/Bid Test");
+console.log("  AnonPool Full User Flow Test");
 console.log("========================================");
 console.log("");
 console.log("Configuration:");
 console.log(`  RPC URL:    ${RPC_URL}`);
 console.log(`  API URL:    ${API_URL}`);
 console.log(`  Pool:       ${POOL_ADDRESS}`);
+console.log(`  Gateway:    ${GATEWAY_ADDRESS}`);
 console.log(`  Token:      ${ANON_TOKEN}`);
 console.log("");
 
@@ -131,8 +169,8 @@ function logTest(name: string, passed: boolean, details?: string) {
 }
 
 async function main() {
-  // Step 0: Fund fresh test account
-  console.log("Step 0: Funding fresh test account...");
+  // Step 0: Fund fresh test account with ETH
+  console.log("Step 0: Funding fresh test account with ETH...");
 
   const ethFunder = privateKeyToAccount(ANVIL_PRIVATE_KEY_0);
   const ethFunderClient = createWalletClient({
@@ -141,45 +179,17 @@ async function main() {
     transport: http(RPC_URL),
   });
 
-  // Send ETH for gas
+  // Send ETH for gas and buying ANON
+  const fundAmount = parseEther("1");
   await ethFunderClient.sendTransaction({
     to: account.address,
-    value: parseEther("1"),
+    value: fundAmount,
   });
-  console.log("  Sent 1 ETH for gas");
-
-  // Impersonate whale to send ANON tokens
-  await publicClient.request({
-    // @ts-expect-error Anvil-specific method
-    method: "anvil_impersonateAccount",
-    params: [WHALE_ADDRESS],
-  });
-
-  const whaleClient = createWalletClient({
-    account: WHALE_ADDRESS,
-    chain: { ...base, id: 8453 },
-    transport: http(RPC_URL),
-  });
-
-  const fundAmount = parseUnits("10000", 18); // 10,000 ANON
-  await whaleClient.writeContract({
-    address: ANON_TOKEN,
-    abi: ERC20_ABI,
-    functionName: "transfer",
-    args: [account.address, fundAmount],
-  });
-
-  await publicClient.request({
-    // @ts-expect-error Anvil-specific method
-    method: "anvil_stopImpersonatingAccount",
-    params: [WHALE_ADDRESS],
-  });
-
-  console.log(`  Sent ${formatUnits(fundAmount, 18)} ANON`);
+  console.log(`  Sent ${formatEther(fundAmount)} ETH`);
   console.log("");
 
-  // Step 1: Create privacy wallet and deposit
-  console.log("Step 1: Setting up privacy wallet and depositing...");
+  // Step 1: Create privacy wallet
+  console.log("Step 1: Setting up privacy wallet...");
 
   // Create a deterministic signature for the wallet
   const signMessage = PrivacyWallet.getSignMessage();
@@ -189,42 +199,80 @@ async function main() {
     POOL_ADDRESS,
     RPC_URL,
   );
+  console.log("  Privacy wallet created");
+  console.log("");
 
-  // Deposit 1000 ANON
-  const depositAmount = parseUnits("1000", 18);
-  const { note: depositNote } =
-    privacyWallet.generateDepositNote(depositAmount);
+  // Step 2: Buy ANON with ETH via Gateway (swap + deposit in one tx)
+  console.log("Step 2: Buying ANON with ETH via Gateway...");
+
+  // Get quote for 0.1 ETH -> ANON
+  const ethToSwap = parseEther("0.1");
+  console.log(`  Getting quote for ${formatEther(ethToSwap)} ETH...`);
+
+  let quoteResult: bigint;
+  try {
+    const result = await publicClient.simulateContract({
+      address: QUOTER_V2,
+      abi: QUOTER_ABI,
+      functionName: "quoteExactInputSingle",
+      args: [
+        {
+          tokenIn: WETH,
+          tokenOut: ANON_TOKEN,
+          amountIn: ethToSwap,
+          fee: 10000, // 1%
+          sqrtPriceLimitX96: 0n,
+        },
+      ],
+    });
+    quoteResult = result.result[0];
+    console.log(`  Quote: ${formatEther(ethToSwap)} ETH = ${formatUnits(quoteResult, 18)} ANON`);
+  } catch (e) {
+    console.error("  Failed to get quote - pool may not have liquidity");
+    console.error(e);
+    process.exit(1);
+  }
+
+  // Generate commitment for the deposit
+  const { note: depositNote } = privacyWallet.generateDepositNote(quoteResult);
   const commitmentBytes = pad(toHex(depositNote.commitment), {
     size: 32,
   }) as `0x${string}`;
+  console.log(`  Generated commitment: ${commitmentBytes.slice(0, 20)}...`);
 
-  // Approve
-  await walletClient.writeContract({
-    address: ANON_TOKEN,
-    abi: ERC20_ABI,
-    functionName: "approve",
-    args: [POOL_ADDRESS, depositAmount],
+  // Apply 1% slippage to minAmountOut
+  const minAmountOut = (quoteResult * 99n) / 100n;
+
+  // Execute swap + deposit via gateway
+  const swapDepositHash = await walletClient.writeContract({
+    address: GATEWAY_ADDRESS,
+    abi: ANON_POOL_GATEWAY_ABI,
+    functionName: "depositWithETH",
+    args: [commitmentBytes, minAmountOut],
+    value: ethToSwap,
   });
 
-  // Deposit
-  const depositHash = await walletClient.writeContract({
-    address: POOL_ADDRESS,
-    abi: ANON_POOL_ABI,
-    functionName: "deposit",
-    args: [commitmentBytes, depositAmount],
+  console.log(`  Tx: ${swapDepositHash}`);
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: swapDepositHash,
   });
+  console.log(`  Status: ${receipt.status === "success" ? "SUCCESS" : "FAILED"}`);
+  console.log(`  Gas used: ${receipt.gasUsed}`);
 
-  console.log(`  Deposited ${formatUnits(depositAmount, 18)} ANON`);
-  console.log(`  Tx: ${depositHash}`);
+  if (receipt.status !== "success") {
+    console.error("  Gateway swap+deposit failed!");
+    process.exit(1);
+  }
 
   // Sync wallet to pick up deposit
   await privacyWallet.syncFromChain();
   const balance = privacyWallet.getBalance();
   console.log(`  Private balance: ${formatUnits(balance.available, 18)} ANON`);
+  logTest("Gateway swap+deposit succeeded", balance.available > 0n);
   console.log("");
 
-  // Step 2: Get current auction state
-  console.log("Step 2: Checking current auction state...");
+  // Step 3: Get current auction state
+  console.log("Step 3: Checking current auction state...");
 
   const currentRes = await fetch(`${API_URL}/api/auction/current`);
   const currentData = (await currentRes.json()) as AuctionCurrentResponse;
@@ -235,8 +283,8 @@ async function main() {
   console.log(`  Time remaining: ${currentData.timeRemaining}s`);
   console.log("");
 
-  // Step 3: Run bid tests
-  console.log("Step 3: Running bid tests...");
+  // Step 4: Run bid tests
+  console.log("Step 4: Running bid tests...");
   console.log("");
 
   const slotId = currentData.currentSlotId;
@@ -245,9 +293,9 @@ async function main() {
   const currentHighest = BigInt(currentData.highestBid || "0");
   const baseBid = currentHighest > 0n ? currentHighest + parseUnits("10", 18) : parseUnits("10", 18);
 
-  // Test 3a: Submit valid bid #1
+  // Test 4a: Submit valid bid #1
   const bid1Amount = baseBid;
-  console.log(`Test 3a: Submit valid bid #1 (${formatUnits(bid1Amount, 18)} ANON)`);
+  console.log(`Test 4a: Submit valid bid #1 (${formatUnits(bid1Amount, 18)} ANON)`);
   const bid1Result = await submitBid(
     privacyWallet,
     slotId,
@@ -256,9 +304,9 @@ async function main() {
   );
   logTest("Valid bid #1 accepted", bid1Result.success, bid1Result.error);
 
-  // Test 3b: Submit valid bid #2 (higher)
+  // Test 4b: Submit valid bid #2 (higher)
   const bid2Amount = bid1Amount + parseUnits("10", 18);
-  console.log(`Test 3b: Submit valid bid #2 (${formatUnits(bid2Amount, 18)} ANON)`);
+  console.log(`Test 4b: Submit valid bid #2 (${formatUnits(bid2Amount, 18)} ANON)`);
   const bid2Result = await submitBid(
     privacyWallet,
     slotId,
@@ -267,9 +315,9 @@ async function main() {
   );
   logTest("Valid bid #2 accepted", bid2Result.success, bid2Result.error);
 
-  // Test 3c: Submit invalid bid (lower than current)
+  // Test 4c: Submit invalid bid (lower than current)
   const bid3Amount = parseUnits("5", 18);
-  console.log(`Test 3c: Submit invalid bid (${formatUnits(bid3Amount, 18)} ANON - lower than current)`);
+  console.log(`Test 4c: Submit invalid bid (${formatUnits(bid3Amount, 18)} ANON - lower than current)`);
   const bid3Result = await submitBid(
     privacyWallet,
     slotId,
@@ -282,9 +330,9 @@ async function main() {
     bid3Result.error,
   );
 
-  // Test 3d: Submit valid bid #3 (even higher)
+  // Test 4d: Submit valid bid #3 (even higher)
   const bid4Amount = bid2Amount + parseUnits("30", 18);
-  console.log(`Test 3d: Submit valid bid #3 (${formatUnits(bid4Amount, 18)} ANON)`);
+  console.log(`Test 4d: Submit valid bid #3 (${formatUnits(bid4Amount, 18)} ANON)`);
   const bid4Result = await submitBid(
     privacyWallet,
     slotId,
@@ -293,8 +341,8 @@ async function main() {
   );
   logTest("Valid bid #3 accepted", bid4Result.success, bid4Result.error);
 
-  // Test 3e: Missing required fields
-  console.log("Test 3e: Submit bid with missing content");
+  // Test 4e: Missing required fields
+  console.log("Test 4e: Submit bid with missing content");
   const bid5Result = await submitBidRaw({
     bidAmount: parseUnits("100", 18).toString(),
     proof: { proof: [], publicInputs: ["0x1", "0x2", "0x3", "0x4"] },
@@ -307,8 +355,8 @@ async function main() {
     bid5Result.error,
   );
 
-  // Test 3f: Content too long
-  console.log("Test 3f: Submit bid with content too long");
+  // Test 4f: Content too long
+  console.log("Test 4f: Submit bid with content too long");
   const longContent = "x".repeat(400); // Over 320 char limit
   const bid6Result = await submitBidRaw({
     content: longContent,
@@ -325,8 +373,8 @@ async function main() {
 
   console.log("");
 
-  // Step 4: Verify final auction state
-  console.log("Step 4: Verifying final auction state...");
+  // Step 5: Verify final auction state
+  console.log("Step 5: Verifying final auction state...");
 
   const finalRes = await fetch(`${API_URL}/api/auction/current`);
   const finalData = (await finalRes.json()) as AuctionCurrentResponse;

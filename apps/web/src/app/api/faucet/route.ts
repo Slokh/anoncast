@@ -22,10 +22,7 @@ const FAUCET_AMOUNT = parseUnits('1000', 18)
 export async function POST(request: Request) {
   // Only allow in local dev mode
   if (!IS_LOCAL) {
-    return NextResponse.json(
-      { error: 'Faucet only available in local dev mode' },
-      { status: 403 }
-    )
+    return NextResponse.json({ error: 'Faucet only available in local dev mode' }, { status: 403 })
   }
 
   try {
@@ -33,17 +30,11 @@ export async function POST(request: Request) {
     const { recipient } = body
 
     if (!recipient || typeof recipient !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing recipient address' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing recipient address' }, { status: 400 })
     }
 
     if (!CONTRACTS.ANON_TOKEN) {
-      return NextResponse.json(
-        { error: 'Token contract not configured' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Token contract not configured' }, { status: 500 })
     }
 
     // Create clients for Anvil
@@ -66,18 +57,15 @@ export async function POST(request: Request) {
     })
 
     // Check whale balance
-    const whaleBalance = await publicClient.readContract({
+    const whaleBalance = (await publicClient.readContract({
       address: CONTRACTS.ANON_TOKEN,
       abi: ERC20_ABI,
       functionName: 'balanceOf',
       args: [WHALE_ADDRESS],
-    }) as bigint
+    })) as bigint
 
     if (whaleBalance < FAUCET_AMOUNT) {
-      return NextResponse.json(
-        { error: 'Faucet whale has insufficient balance' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Faucet whale has insufficient balance' }, { status: 500 })
     }
 
     // Transfer tokens
